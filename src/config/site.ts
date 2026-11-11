@@ -102,9 +102,11 @@ export const site = {
     // { label: { zh: '文章', en: 'Writing' }, detail: '…', href: '/blog/', icon: 'pen', internal: true, localized: true },
   ] satisfies SiteLink[] as SiteLink[],
 
-  /** Footer columns. */
-  friends: [{ label: '枯白啃设计', href: 'https://kubai.design/' }],
-  related: [{ label: 'Kubai Icons', href: 'https://icons.kubai.design/' }],
+  /** Friends' sites, listed in the footer. */
+  friends: [
+    { label: '枯白啃设计', href: 'https://kubai.design/' },
+    { label: 'Kubai Icons', href: 'https://icons.kubai.design/' },
+  ],
 };
 
 export function localize(value: Localized, lang: Lang): string {

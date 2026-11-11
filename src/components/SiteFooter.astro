@@ -2,7 +2,8 @@
 import PixelWordmark from './PixelWordmark.astro';
 import Beian from './Beian.astro';
 import { site } from '../config/site';
-import { useTranslations, type Lang } from '../i18n/ui';
+import { localePath, useTranslations, type Lang } from '../i18n/ui';
+import { withBase } from '../lib/url';
 
 interface Props {
   lang: Lang;
@@ -12,9 +13,18 @@ const { lang } = Astro.props;
 const t = useTranslations(lang);
 const year = new Date().getFullYear();
 
+// The site's own pages, then friends' sites (which open as external links).
 const columns = [
-  { title: t('footer.friends'), links: site.friends },
-  { title: t('footer.related'), links: site.related },
+  {
+    title: t('footer.site'),
+    links: [
+      { label: t('nav.home'), href: localePath(lang, '/') },
+      { label: t('nav.blog'), href: localePath(lang, '/blog/') },
+      { label: 'RSS', href: withBase('/rss.xml') },
+    ],
+    external: false,
+  },
+  { title: t('footer.friends'), links: site.friends, external: true },
 ];
 ---
 
@@ -25,7 +35,7 @@ const columns = [
         <section>
           <h2>{column.title}</h2>
           <ul>
-            {column.links.map((l) => (<li><a class="pill-link cursor sq" href={l.href} rel="noopener">{l.label}</a></li>))}
+            {column.links.map((l) => (<li><a class="pill-link cursor sq" href={l.href} rel={column.external ? 'noopener' : undefined}>{l.label}</a></li>))}
           </ul>
         </section>
       ))
