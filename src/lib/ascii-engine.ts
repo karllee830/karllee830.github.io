@@ -47,6 +47,19 @@ const RIPPLE_SPEED = 0.4;
 const RIPPLE_WIDTH = 24;
 const RIPPLE_LIFE = 1400;
 
+// Added to a mode code while a unit is inside the wavefront previewing it.
+const TINT = 16;
+// Older sweeps beyond this are settled at once.
+const MAX_SWEEPS = 6;
+
+/** One mode switch in flight: per unit, when its wavefront starts and when the new mode shows. */
+interface Sweep {
+  mode: number;
+  tintAt: Float64Array;
+  switchAt: Float64Array;
+  end: number;
+}
+
 // Faint dark edge around marks drawn in original colours, so pale colours
 // (the white cap, the light shirt) stay legible on a light background.
 const TINT_OUTLINE = 'rgba(0, 0, 0, 0.16)';
@@ -91,13 +104,23 @@ const BRAILLE_ORDER: [number, number][] = [
 export interface AsciiEngine {
   /** With a wave, the switch follows it (shared with the page backdrop). */
   setMode(mode: RenderMode, wave?: ModeWave): void;
+  /** Keeps the background clear in this canvas-relative CSS px rect (e.g. under a button). */
+  setReserved(rect: { x: number; y: number; width: number; height: number } | null): void;
   replay(): void;
   destroy(): void;
 }
 
-export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: RenderMode = 'ascii'): AsciiEngine {
+/**
+ * `pointerArea` is the element whose hover drives the lens; pass a wrapper
+ * when controls overlay the canvas so hovering them keeps the lens open.
+ */
+export function createAsciiEngine(
+  canvas: HTMLCanvasElement,
+  initialMode: RenderMode = 'ascii',
+  pointerArea: HTMLElement = canvas,
+): AsciiEngine {
   const ctx = canvas.getContext('2d');
-  if (!ctx) return { setMode() {}, replay() {}, destroy() {} };
+  if (!ctx) return { setMode() {}, setReserved() {}, replay() {}, destroy() {} };
 
   const model = buildAvatarModel(avatar);
 
@@ -123,15 +146,19 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
   let tone = new Float32Array(0);
   let accent = new Uint8Array(0);
   let halo = new Uint8Array(0);
+  // Units kept clear for overlaid controls.
+  let reserved = new Uint8Array(0);
+  let reservedRect: { x: number; y: number; width: number; height: number } | null = null;
   let seed = new Uint16Array(0);
   let heat = new Float32Array(0);
   let reveal = new Float32Array(0);
   let colorIndex = new Int16Array(0);
   const palette: string[] = [];
-  let switchAt = new Float64Array(0);
-  // When a unit enters its transition (accent wavefront or glyph scramble).
-  let tintAt = new Float64Array(0);
+  // Mode each unit shows before the oldest running sweep.
   let from = new Int8Array(0);
+  // Mode switches still travelling across the grid, oldest first. Several can
+  // overlap when styles change quickly; each keeps going on its own.
+  let sweeps: Sweep[] = [];
 
   let mode = MODES.indexOf(initialMode);
   let colors = { fg: '#000', subtle: '#999', accent: '#669fd0' };
@@ -217,20 +244,21 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
 
     cols = Math.floor(width / UNIT);
     rows = Math.floor(height / UNIT);
+    // Centre the grid both ways so the leftover space is split evenly; the
+    // figure still stands on the last row.
     originX = (width - cols * UNIT) / 2;
-    // Bottom-aligned so the figure stands on the lower edge.
-    originY = height - rows * UNIT;
+    originY = (height - rows * UNIT) / 2;
 
     const size = cols * rows;
     tone = new Float32Array(size).fill(-1);
     accent = new Uint8Array(size);
     halo = new Uint8Array(size);
+    reserved = new Uint8Array(size);
     seed = new Uint16Array(size);
     heat = new Float32Array(size);
     reveal = new Float32Array(size);
     colorIndex = new Int16Array(size).fill(-1);
-    switchAt = new Float64Array(size);
-    tintAt = new Float64Array(size);
+    sweeps = [];
     from = new Int8Array(size).fill(mode);
     for (let i = 0; i < size; i++) seed[i] = (Math.random() * 65535) | 0;
 
@@ -270,7 +298,23 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
         }
       }
     }
+    markReserved();
     return true;
+  }
+
+  /** Marks the units that the reserved rect actually overlaps (touching edges don't count). */
+  function markReserved() {
+    reserved.fill(0);
+    if (!reservedRect) return;
+    const { x, y, width: w, height: h } = reservedRect;
+    for (let r = 0; r < rows; r++) {
+      const top = originY + r * UNIT;
+      if (top >= y + h || top + UNIT <= y) continue;
+      for (let c = 0; c < cols; c++) {
+        const left = originX + c * UNIT;
+        if (left < x + w && left + UNIT > x) reserved[r * cols + c] = 1;
+      }
+    }
   }
 
   const noiseGlyph = (i: number, now: number) => NOISE[(seed[i] + ((now / 70) | 0)) % NOISE.length];
@@ -357,7 +401,7 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
    * halftone field, Dither a dithered fade toward the floor.
    */
   function drawBackdrop(m: number, i: number, cx: number, cy: number, tint = false) {
-    if (halo[i]) return;
+    if (halo[i] || reserved[i]) return;
     const c2d = g;
     c2d.fillStyle = tint ? colors.accent : colors.subtle;
     if (m === 1) {
@@ -394,19 +438,35 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
     }
   }
 
-  /** Mode a unit currently shows; -2 while it is inside the transition wavefront. */
+  /**
+   * Mode a unit currently shows (NONE before the intro reaches it), plus TINT
+   * while a wavefront previewing that mode covers it. The newest sweep that
+   * has reached the unit wins.
+   */
   function shownMode(i: number, now: number) {
-    if (now >= switchAt[i]) return mode;
-    if (now >= tintAt[i]) return -2;
+    for (let k = sweeps.length - 1; k >= 0; k--) {
+      const sweep = sweeps[k];
+      if (now >= sweep.switchAt[i]) return sweep.mode;
+      if (now >= sweep.tintAt[i]) return sweep.mode + TINT;
+    }
     return from[i];
   }
 
+  /** Folds finished sweeps (and any beyond the limit) into `from`. */
+  function settle(now: number) {
+    while (sweeps.length && (now >= sweeps[0].end || sweeps.length > MAX_SWEEPS)) {
+      const sweep = sweeps.shift()!;
+      for (let i = 0; i < from.length; i++) if (now >= sweep.switchAt[i]) from[i] = sweep.mode;
+    }
+  }
+
   function drawField(i: number, cx: number, cy: number, now: number) {
+    if (reserved[i]) return;
     const h = heat[i];
     if (h < 0.04) {
       const m = shownMode(i, now);
       // The wavefront previews the incoming background in the accent colour.
-      if (m === -2) drawBackdrop(mode, i, cx, cy, true);
+      if (m >= TINT) drawBackdrop(m - TINT, i, cx, cy, true);
       else if (m !== NONE) drawBackdrop(m, i, cx, cy);
       return;
     }
@@ -586,14 +646,13 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
           drawFigure(mode, i, x, y, now, palette[colorIndex[i]]);
           continue;
         }
-        if (now < tintAt[i]) {
-          if (from[i] !== NONE) drawFigure(from[i], i, x, y, now);
-        } else if (now < switchAt[i]) {
+        const m = shownMode(i, now);
+        if (m >= TINT) {
           g.globalAlpha = 1;
           glyphAt(noiseGlyph(i, now), x, y, colors.accent);
           glyphAt(noiseGlyph(i + 3, now), x + HALF, y, colors.accent);
-        } else {
-          drawFigure(mode, i, x, y, now);
+        } else if (m !== NONE) {
+          drawFigure(m, i, x, y, now);
         }
       }
     }
@@ -675,6 +734,7 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
     raf = 0;
     const dt = Math.min(64, now - lastFrame || 16);
     lastFrame = now;
+    settle(now);
 
     let active = now < transitionEnd;
     let heatBefore = 0;
@@ -752,8 +812,21 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
 
   function transition(next: number, kind: 'intro' | 'switch', wave?: ModeWave) {
     const now = performance.now();
-    const instant = reducedMotion.matches;
-    let end = now;
+    settle(now);
+
+    if (reducedMotion.matches) {
+      sweeps = [];
+      from.fill(next);
+      mode = next;
+      draw(now);
+      return;
+    }
+
+    if (kind === 'intro') {
+      // The figure assembles from nothing; the background is already there.
+      sweeps = [];
+      for (let i = 0; i < tone.length; i++) from[i] = tone[i] < 0 ? next : NONE;
+    }
 
     // Distances to the wave origin are measured in viewport pixels, so this
     // canvas and the page backdrop switch along the same circle.
@@ -770,41 +843,34 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
       );
     const waveOf = { mode: MODES[next], ...origin } as ModeWave;
     const band = WAVE_WIDTH / WAVE_SPEED;
+    const sweep: Sweep = {
+      mode: next,
+      tintAt: new Float64Array(tone.length),
+      switchAt: new Float64Array(tone.length),
+      end: now,
+    };
 
     for (let i = 0; i < tone.length; i++) {
       if (tone[i] < 0) {
         // Background units: the accent band passes, then the new style.
         if (kind === 'intro') continue;
-        from[i] = now >= switchAt[i] ? mode : from[i];
-        if (instant) {
-          tintAt[i] = switchAt[i] = 0;
-          continue;
-        }
-        tintAt[i] = arrivalTime(waveOf, distance(i));
-        switchAt[i] = tintAt[i] + band;
-        end = Math.max(end, switchAt[i]);
-        continue;
-      }
-
-      const shown = now >= switchAt[i] ? mode : from[i];
-      from[i] = kind === 'intro' ? NONE : shown;
-      if (instant) {
-        tintAt[i] = switchAt[i] = 0;
-        continue;
-      }
-      if (kind === 'intro') {
-        const r = (i / cols) | 0;
-        switchAt[i] = now + SCRAMBLE_MS + (r - figureRowMin) * 18 + Math.random() * 320;
+        sweep.tintAt[i] = arrivalTime(waveOf, distance(i));
+        sweep.switchAt[i] = sweep.tintAt[i] + band;
       } else {
-        // Figure units scramble as the same front reaches them.
-        switchAt[i] = arrivalTime(waveOf, distance(i)) + SCRAMBLE_MS + Math.random() * 60;
+        if (kind === 'intro') {
+          const r = (i / cols) | 0;
+          sweep.switchAt[i] = now + SCRAMBLE_MS + (r - figureRowMin) * 18 + Math.random() * 320;
+        } else {
+          // Figure units scramble as the same front reaches them.
+          sweep.switchAt[i] = arrivalTime(waveOf, distance(i)) + SCRAMBLE_MS + Math.random() * 60;
+        }
+        sweep.tintAt[i] = sweep.switchAt[i] - SCRAMBLE_MS;
       }
-      tintAt[i] = switchAt[i] - SCRAMBLE_MS;
-      end = Math.max(end, switchAt[i]);
+      sweep.end = Math.max(sweep.end, sweep.switchAt[i]);
     }
+    sweeps.push(sweep);
     mode = next;
-    transitionEnd = end;
-    if (instant) draw(now);
+    transitionEnd = Math.max(transitionEnd, sweep.end);
     kick();
   }
 
@@ -815,17 +881,20 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
     const now = performance.now();
     if (!visible || reducedMotion.matches || now < transitionEnd || !Number.isFinite(figureRowMin)) return;
 
+    // A short scramble back into the same mode, as a sweep over two rows.
+    const sweep: Sweep = { mode, tintAt: new Float64Array(tone.length), switchAt: new Float64Array(tone.length), end: now };
     const row = figureRowMin + Math.floor(Math.random() * (figureRowMax - figureRowMin + 1));
     for (let r = row; r <= Math.min(figureRowMax, row + 1); r++) {
       for (let c = 0; c < cols; c++) {
         const i = r * cols + c;
         if (tone[i] < 0) continue;
-        from[i] = mode;
-        switchAt[i] = now + SCRAMBLE_MS + c * 8 + Math.random() * 60;
-        tintAt[i] = switchAt[i] - SCRAMBLE_MS;
-        transitionEnd = Math.max(transitionEnd, switchAt[i]);
+        sweep.switchAt[i] = now + SCRAMBLE_MS + c * 8 + Math.random() * 60;
+        sweep.tintAt[i] = sweep.switchAt[i] - SCRAMBLE_MS;
+        sweep.end = Math.max(sweep.end, sweep.switchAt[i]);
       }
     }
+    sweeps.push(sweep);
+    transitionEnd = Math.max(transitionEnd, sweep.end);
     kick();
   }
 
@@ -852,9 +921,9 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
     kick();
   };
 
-  canvas.addEventListener('pointermove', onMove);
-  canvas.addEventListener('pointerleave', onLeave);
-  canvas.addEventListener('pointercancel', onLeave);
+  pointerArea.addEventListener('pointermove', onMove);
+  pointerArea.addEventListener('pointerleave', onLeave);
+  pointerArea.addEventListener('pointercancel', onLeave);
   canvas.addEventListener('pointerdown', onDown);
 
   const resizeObserver = new ResizeObserver(() => {
@@ -900,6 +969,12 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
       if (index === -1 || index === mode) return;
       transition(index, 'switch', wave);
     },
+    setReserved(rect) {
+      reservedRect = rect;
+      markReserved();
+      baseDirty = true;
+      if (started) draw(performance.now());
+    },
     replay() {
       transition(mode, 'intro');
     },
@@ -912,9 +987,9 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
       themeObserver.disconnect();
       visibilityObserver.disconnect();
       document.removeEventListener('visibilitychange', onVisibility);
-      canvas.removeEventListener('pointermove', onMove);
-      canvas.removeEventListener('pointerleave', onLeave);
-      canvas.removeEventListener('pointercancel', onLeave);
+      pointerArea.removeEventListener('pointermove', onMove);
+      pointerArea.removeEventListener('pointerleave', onLeave);
+      pointerArea.removeEventListener('pointercancel', onLeave);
       canvas.removeEventListener('pointerdown', onDown);
     },
   };

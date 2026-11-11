@@ -1,165 +1,205 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createAsciiEngine, type AsciiEngine } from '../../lib/ascii-engine';
 import { MODE_EVENT, MODE_STORAGE_KEY, readStoredMode, type ModeWave, type RenderMode } from '../../lib/mode-wave';
 import './ascii-avatar.css';
 
-// Order of the mode buttons (independent of the engine's internal mode codes).
+// Order the styles cycle in (independent of the engine's internal mode codes).
 const MODES: RenderMode[] = ['ascii', 'dither', 'pixel', 'dots', 'cross', 'braille', 'hatch'];
+
+/** First switch comes soon after the intro; later ones at a steady, slower pace. */
+const FIRST_DELAY = 10000;
+const INTERVAL = 30000;
+/** While paused (hovered, off screen, hidden tab), check again this often. */
+const RETRY = 1000;
+/** Grid unit of the canvas (see ascii-engine) and rows shown per breakpoint. */
+const UNIT = 12;
+const ROWS_WIDE = 31;
+const ROWS_NARROW = 29;
 
 interface Props {
   label: string;
-  modesLabel: string;
-  replayLabel: string;
-  modeLabels: Record<RenderMode, string>;
+  stylesLabel: string;
+  styleLabels: Record<RenderMode, string>;
 }
 
-export default function AsciiAvatar({ label, modesLabel, replayLabel, modeLabels }: Props) {
+/**
+ * Hero avatar canvas that cycles through the render styles on its own, with
+ * a small picker in the top-right corner (revealed on hover or focus, or by
+ * a tap) to choose one directly. Each switch starts one wave from the avatar
+ * that the canvas, the page margins and the footer all follow.
+ *
+ * Cycling pauses while the pointer is on the avatar or the picker, while it
+ * is off screen or the tab is hidden, and is off for reduced motion. Picking
+ * a style restarts the cycle from there. The current style is remembered;
+ * other pages (which have no avatar) show it without cycling.
+ */
+export default function AsciiAvatar({ label, stylesLabel, styleLabels }: Props) {
+  const rootRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const toggleRef = useRef<HTMLButtonElement>(null);
   const engineRef = useRef<AsciiEngine | null>(null);
-  const chipRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const modeRef = useRef<RenderMode>('ascii');
+  const restartRef = useRef<(delay: number) => void>(() => {});
   const [mode, setMode] = useState<RenderMode>('ascii');
-  const modesRef = useRef<HTMLDivElement>(null);
-  const [thumb, setThumb] = useState<CSSProperties | null>(null);
-  const [settled, setSettled] = useState(false);
+  const [open, setOpen] = useState(false);
 
-  useEffect(() => {
-    if (!canvasRef.current) return;
-    // Start in the last chosen mode; the page backdrop already shows it.
-    const stored = readStoredMode();
-    const engine = createAsciiEngine(canvasRef.current, stored);
-    engineRef.current = engine;
-    setMode(stored);
-    // Let the thumb jump to the stored mode before its slide transition turns on.
-    const timer = window.setTimeout(() => setSettled(true), 60);
-    return () => {
-      window.clearTimeout(timer);
-      engine.destroy();
-    };
-  }, []);
-
-  /**
-   * User picks a mode: remember it, then start one wave from the avatar that
-   * both this canvas and the page backdrop follow.
-   */
-  const choose = (next: RenderMode) => {
-    if (next === mode) return;
+  /** Switch style with one shared wave from the avatar, and remember it. */
+  const apply = useCallback((next: RenderMode) => {
+    const canvas = canvasRef.current;
+    if (!canvas || next === modeRef.current) return;
+    modeRef.current = next;
+    setMode(next);
     try {
       localStorage.setItem(MODE_STORAGE_KEY, next);
     } catch {
       /* storage unavailable */
     }
-    const rect = canvasRef.current?.getBoundingClientRect();
+    const rect = canvas.getBoundingClientRect();
     const wave: ModeWave = {
       mode: next,
-      x: rect ? rect.left + rect.width / 2 : window.innerWidth / 2,
-      y: rect ? rect.top + rect.height / 2 : window.innerHeight / 2,
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
       t0: performance.now(),
     };
     engineRef.current?.setMode(next, wave);
     window.dispatchEvent(new CustomEvent(MODE_EVENT, { detail: wave }));
-    setMode(next);
-  };
+  }, []);
 
   useEffect(() => {
-    engineRef.current?.setMode(mode);
-  }, [mode]);
+    const canvas = canvasRef.current;
+    const root = rootRef.current;
+    if (!canvas || !root) return;
 
-  // The active chip's background is one thumb that slides between options.
-  useLayoutEffect(() => {
-    const group = modesRef.current;
-    if (!group) return;
-    const place = () => {
-      const chip = chipRefs.current[MODES.indexOf(mode)];
-      if (!chip) return;
-      setThumb({ width: chip.offsetWidth, transform: `translateX(${chip.offsetLeft}px)` });
-      updateFades();
+    // Height = whole rows plus the same leftover the width has, so the grid
+    // sits with equal margins on all four sides.
+    const fit = () => {
+      const width = Math.round(root.getBoundingClientRect().width);
+      const rows = window.matchMedia('(max-width: 767px)').matches ? ROWS_NARROW : ROWS_WIDE;
+      const height = `${rows * UNIT + (width % UNIT)}px`;
+      if (root.style.height !== height) root.style.height = height;
     };
-    place();
-    const observer = new ResizeObserver(place);
-    observer.observe(group);
-    return () => observer.disconnect();
-  }, [mode]);
+    fit();
+    const sizer = new ResizeObserver(fit);
+    sizer.observe(root);
 
-  // Keep the active chip inside the scrollable row.
+    const stored = readStoredMode();
+    modeRef.current = stored;
+    setMode(stored);
+    engineRef.current = createAsciiEngine(canvas, stored, root);
+
+    // The style button sits on the top-right 2×2 block of the canvas grid:
+    // those units are kept clear and the button is centred on them, so the
+    // icon lines up with the pattern at any width.
+    const reserve = () => {
+      const picker = root.querySelector<HTMLElement>('.style-picker');
+      const toggle = toggleRef.current;
+      if (!picker || !toggle) return;
+      const width = Math.round(canvas.getBoundingClientRect().width);
+      const height = Math.round(canvas.getBoundingClientRect().height);
+      const cols = Math.floor(width / UNIT);
+      const rows = Math.floor(height / UNIT);
+      const left = (width - cols * UNIT) / 2 + (cols - 2) * UNIT;
+      const top = (height - rows * UNIT) / 2;
+      const block = UNIT * 2;
+      const size = toggle.offsetWidth;
+      picker.style.top = `${top + (block - size) / 2}px`;
+      picker.style.right = `${width - (left + block) + (block - size) / 2}px`;
+      engineRef.current?.setReserved({ x: left, y: top, width: block, height: block });
+    };
+    reserve();
+    const reserver = new ResizeObserver(reserve);
+    reserver.observe(canvas);
+
+    let hovering = false;
+    let onScreen = true;
+    const onEnter = () => (hovering = true);
+    const onLeave = () => (hovering = false);
+    root.addEventListener('pointerenter', onEnter);
+    root.addEventListener('pointerleave', onLeave);
+    const observer = new IntersectionObserver(([entry]) => (onScreen = entry.isIntersecting));
+    observer.observe(root);
+
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let timer = 0;
+    const tick = () => {
+      if (hovering || !onScreen || document.visibilityState !== 'visible') {
+        timer = window.setTimeout(tick, RETRY);
+        return;
+      }
+      apply(MODES[(MODES.indexOf(modeRef.current) + 1) % MODES.length]);
+      timer = window.setTimeout(tick, INTERVAL);
+    };
+    restartRef.current = (delay) => {
+      window.clearTimeout(timer);
+      if (!reduced) timer = window.setTimeout(tick, delay);
+    };
+    restartRef.current(FIRST_DELAY);
+
+    return () => {
+      window.clearTimeout(timer);
+      sizer.disconnect();
+      reserver.disconnect();
+      observer.disconnect();
+      root.removeEventListener('pointerenter', onEnter);
+      root.removeEventListener('pointerleave', onLeave);
+      engineRef.current?.destroy();
+    };
+  }, [apply]);
+
+  // A tap opens the menu on touch screens; tapping elsewhere closes it.
   useEffect(() => {
-    const group = modesRef.current;
-    const chip = chipRefs.current[MODES.indexOf(mode)];
-    if (!group || !chip) return;
-    const left = chip.offsetLeft - 24;
-    const right = chip.offsetLeft + chip.offsetWidth + 24 - group.clientWidth;
-    const target = Math.min(Math.max(group.scrollLeft, right), left);
-    if (target !== group.scrollLeft) {
-      group.scrollTo({ left: target, behavior: settled ? 'smooth' : 'auto' });
-    }
-    // Smooth scrolling may not report every step; settle the edge fades after it.
-    const timer = window.setTimeout(updateFades, 450);
-    return () => window.clearTimeout(timer);
-  }, [mode, settled]);
+    if (!open) return;
+    const close = (event: PointerEvent) => {
+      if (!(event.target as Element).closest('.style-picker')) setOpen(false);
+    };
+    document.addEventListener('pointerdown', close);
+    return () => document.removeEventListener('pointerdown', close);
+  }, [open]);
 
-  /** Fade an edge only while more chips wait beyond it. */
-  const updateFades = () => {
-    const group = modesRef.current;
-    if (!group) return;
-    group.toggleAttribute('data-more-left', group.scrollLeft > 1);
-    group.toggleAttribute('data-more-right', group.scrollLeft + group.clientWidth < group.scrollWidth - 1);
+  const pick = (next: RenderMode) => {
+    apply(next);
+    setOpen(false);
+    restartRef.current(INTERVAL);
+    // Drop focus so the menu and button fade away once the pointer leaves.
+    (document.activeElement as HTMLElement | null)?.blur();
   };
 
-  // Arrow keys move between options, as in a native radio group.
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    const step = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 0;
-    if (!step) return;
-    event.preventDefault();
-    const next = (MODES.indexOf(mode) + step + MODES.length) % MODES.length;
-    choose(MODES[next]);
-    chipRefs.current[next]?.focus();
-  };
+  // Mouse users get the menu on hover; only touch and pen taps pin it open.
+  const lastPointer = useRef('mouse');
 
   return (
-    <div className="ascii-hero sq sq-line">
-      <div className="ascii-stage sq">
-        <canvas ref={canvasRef} className="ascii-canvas" role="img" aria-label={label} />
-      </div>
-      <div className="ascii-bar">
-        <div
-          ref={modesRef}
-          className="ascii-modes"
-          role="radiogroup"
-          aria-label={modesLabel}
-          onKeyDown={onKeyDown}
-          onScroll={updateFades}
-          data-ready={thumb ? '' : undefined}
-          data-settled={settled ? '' : undefined}
-        >
-          <span className="ascii-thumb sq" style={thumb ?? undefined} aria-hidden="true" />
-          {MODES.map((m, index) => (
-            <button
-              key={m}
-              ref={(el) => {
-                chipRefs.current[index] = el;
-              }}
-              type="button"
-              role="radio"
-              aria-checked={mode === m}
-              tabIndex={mode === m ? 0 : -1}
-              className="ascii-chip sq sq-line"
-              onClick={() => choose(m)}
-            >
-              {modeLabels[m]}
-            </button>
-          ))}
-        </div>
+    <div ref={rootRef} className="ascii-stage">
+      <canvas ref={canvasRef} className="ascii-canvas" role="img" aria-label={label} />
+      <div className="style-picker" data-open={open ? '' : undefined}>
         <button
+          ref={toggleRef}
           type="button"
-          className="ascii-replay sq sq-line"
-          aria-label={replayLabel}
-          title={replayLabel}
-          onClick={() => engineRef.current?.replay()}
+          className="style-toggle sq sq-line"
+          aria-label={stylesLabel}
+          aria-expanded={open}
+          title={stylesLabel}
+          onPointerDown={(event) => (lastPointer.current = event.pointerType)}
+          onClick={() => {
+            if (lastPointer.current !== 'mouse') setOpen((value) => !value);
+            lastPointer.current = 'mouse';
+          }}
         >
-          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-            <path d="M3 3v5h5" />
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+            <rect x="2" y="2" width="5" height="5" />
+            <rect x="9" y="2" width="5" height="5" />
+            <rect x="2" y="9" width="5" height="5" />
+            <rect x="9" y="9" width="5" height="5" />
           </svg>
         </button>
+        <ul className="style-menu sq sq-line" aria-label={stylesLabel}>
+          {MODES.map((m) => (
+            <li key={m}>
+              <button type="button" className="style-option sq" aria-pressed={mode === m} onClick={() => pick(m)}>
+                {styleLabels[m]}
+              </button>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );

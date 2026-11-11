@@ -1,18 +1,7 @@
-/* Hero frame: outer radius 24, padding 8 → nested surfaces use radius 16. */
-.ascii-hero {
-  --hero-radius: var(--radius-6);
-  --hero-padding: var(--space-2);
-  --sq-r: var(--hero-radius);
-  --sq-bg: var(--color-surface);
-  display: grid;
-  gap: var(--hero-padding);
-  padding: var(--hero-padding);
-}
-
+/* The avatar canvas sits on its own square-cornered surface, with no frame. */
 .ascii-stage {
-  --sq-r: calc(var(--hero-radius) - var(--hero-padding));
   position: relative;
-  height: 360px;
+  height: 376px;
   overflow: hidden;
   background-color: var(--color-surface-2);
 }
@@ -25,152 +14,144 @@
   touch-action: pan-y;
 }
 
-.ascii-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-}
-
-.ascii-bar {
-  min-width: 0;
-}
-
-/* Seven modes do not fit a phone: the row scrolls, with faded edges where more waits. */
-.ascii-modes {
-  --fade-left: 0px;
-  --fade-right: 0px;
-  position: relative;
-  display: flex;
-  flex: 1;
-  gap: var(--space-1);
-  min-width: 0;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scrollbar-width: none;
-  mask-image: linear-gradient(
-    to right,
-    transparent 0,
-    #000 var(--fade-left),
-    #000 calc(100% - var(--fade-right)),
-    transparent 100%
-  );
-}
-
-.ascii-modes::-webkit-scrollbar {
-  display: none;
-}
-
-.ascii-modes[data-more-left] {
-  --fade-left: 24px;
-}
-
-.ascii-modes[data-more-right] {
-  --fade-right: 24px;
-}
-
-.ascii-chip {
-  flex-shrink: 0;
-}
-
-.ascii-replay {
-  flex-shrink: 0;
-}
-
-.ascii-thumb {
-  --sq-r: calc(var(--hero-radius) - var(--hero-padding));
+/* Style picker: a small button in the top-right corner; the list shows on
+   hover or keyboard focus (or after a tap on touch screens). */
+.style-picker {
   position: absolute;
-  top: 0;
-  left: 0;
-  height: var(--control-md);
-  background-color: var(--color-fg);
-  opacity: 0;
-  transition:
-    transform var(--duration-slow) var(--ease-out),
-    width var(--duration-slow) var(--ease-out);
+  top: var(--space-2);
+  right: var(--space-2);
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  /* Only the button (and the open menu) take the pointer, so hovering the
+     empty space where the hidden menu sits does nothing. */
   pointer-events: none;
 }
 
-.ascii-modes[data-ready] .ascii-thumb {
-  opacity: 1;
+.style-toggle {
+  pointer-events: auto;
 }
 
-.ascii-modes:not([data-settled]) .ascii-thumb {
-  transition: none;
-}
-
-/* Bar controls are 32px tall: radius 16 = hero radius − padding. */
-.ascii-chip,
-.ascii-replay {
-  --sq-r: calc(var(--hero-radius) - var(--hero-padding));
+.style-toggle {
+  --sq-r: var(--radius-2);
+  --sq-bg: transparent;
   --sq-border: transparent;
-  height: var(--control-md);
-  font-size: var(--text-ui);
-  line-height: var(--leading-ui);
-  font-weight: var(--weight-medium);
+  display: grid;
+  place-items: center;
+  /* Exactly the 2×2 grid block it sits on. */
+  width: 24px;
+  height: 24px;
   color: var(--color-fg-muted);
+  /* Barely there until the avatar is hovered; full only on the button itself. */
+  opacity: 0.25;
   transition:
-    color var(--duration-base) var(--ease-out),
-    transform var(--duration-fast) var(--ease-out),
+    opacity var(--duration-base) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
     --sq-bg var(--duration-fast) var(--ease-out),
     --sq-border var(--duration-fast) var(--ease-out);
 }
 
-.ascii-chip {
-  padding-inline: var(--space-4);
+.style-toggle svg {
+  fill: currentColor;
 }
 
-.ascii-chip:hover,
-.ascii-replay:hover {
-  --sq-bg: var(--color-hover);
+.ascii-stage:hover .style-toggle {
+  opacity: 0.55;
+}
+
+.style-picker:hover .style-toggle,
+.style-picker[data-open] .style-toggle,
+.style-toggle:focus-visible {
+  --sq-bg: color-mix(in srgb, var(--color-surface) 88%, transparent);
+  --sq-border: var(--color-line-strong);
+  color: var(--color-fg);
+  opacity: 1;
+}
+
+/* Invisible bridge over the gap between button and menu, active only while
+   the picker is in use, so moving down to the menu keeps it open. */
+.style-picker::before {
+  content: "";
+  position: absolute;
+  top: 24px;
+  right: 0;
+  left: 0;
+  height: var(--space-1);
+}
+
+.style-picker:hover::before,
+.style-picker[data-open]::before {
+  pointer-events: auto;
+}
+
+/* Menu radius 12 with a 4px inset → options use radius 8. */
+.style-menu {
+  --sq-r: var(--radius-3);
+  --sq-bg: var(--color-surface);
+  display: grid;
+  min-width: 104px;
+  margin-top: var(--space-1);
+  padding: calc(var(--space-1) - 1px);
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition:
+    opacity var(--duration-fast) var(--ease-out),
+    transform var(--duration-base) var(--ease-out);
+}
+
+.style-picker:hover .style-menu,
+.style-picker:has(:focus-visible) .style-menu,
+.style-picker[data-open] .style-menu {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.style-option {
+  --sq-r: calc(var(--radius-3) - var(--space-1));
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  height: 28px;
+  padding-inline: var(--space-2);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  color: var(--color-fg-muted);
+  text-align: left;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+/* The current style is marked with the accent block. */
+.style-option::before {
+  content: "";
+  flex-shrink: 0;
+  width: 0.45em;
+  height: 1em;
+  background-color: var(--color-accent);
+  transform: scaleY(0);
+  transition: transform var(--duration-base) var(--ease-out);
+}
+
+.style-option:hover {
+  color: var(--color-fg);
+  background-color: var(--color-hover);
+}
+
+.style-option[aria-pressed="true"] {
   color: var(--color-fg);
 }
 
-.ascii-chip {
-  position: relative;
-  z-index: 1;
-}
-
-.ascii-chip:active,
-.ascii-replay:active {
-  transform: scale(0.94);
-}
-
-.ascii-chip[aria-checked="true"] {
-  --sq-bg: transparent;
-  color: var(--color-on-fg);
-}
-
-/* Before hydration there is no thumb; paint the chip itself. */
-.ascii-modes:not([data-ready]) .ascii-chip[aria-checked="true"] {
-  --sq-bg: var(--color-fg);
-}
-
-.ascii-replay {
-  display: grid;
-  place-items: center;
-  width: var(--control-md);
-}
-
-.ascii-replay svg {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  transition: transform var(--duration-slow) var(--ease-out);
-}
-
-.ascii-replay:hover svg {
-  transform: rotate(-45deg);
-}
-
-.ascii-replay:active svg {
-  transform: rotate(-200deg);
+.style-option[aria-pressed="true"]::before {
+  transform: none;
 }
 
 @media (max-width: 767px) {
   .ascii-stage {
-    height: 336px;
+    height: 352px;
   }
 }

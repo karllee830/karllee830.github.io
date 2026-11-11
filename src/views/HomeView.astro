@@ -25,7 +25,7 @@ const prefixLength = [...intro.prefix.replace(/\s/g, '')].length;
 <BaseLayout lang={lang} section="home" routes={{ zh: '/', en: '/' }}>
   <section class="hero" aria-labelledby="hero-title" data-page-opening>
     <h1 id="hero-title" class="statement">
-      <span class="hello"><RevealText text={intro.hello} /></span>
+      <span class="hello" lang={lang === 'en' ? undefined : 'en'}><RevealText text={intro.hello} /></span>
       <span class="sub">
         <RevealText text={intro.prefix} start={helloLength} /><span class="word"><ScrambleText client:idle words={intro.words} /></span><RevealText text={intro.suffix} start={helloLength + prefixLength + 2} />
       </span>
@@ -34,15 +34,14 @@ const prefixLength = [...intro.prefix.replace(/\s/g, '')].length;
     <AsciiAvatar
       client:load
       label={t('avatar.label')}
-      modesLabel={t('avatar.modes')}
-      replayLabel={t('avatar.replay')}
-      modeLabels={{
+      stylesLabel={t('avatar.styles')}
+      styleLabels={{
         ascii: t('avatar.ascii'),
+        dither: t('avatar.dither'),
         pixel: t('avatar.pixel'),
         dots: t('avatar.dots'),
-        dither: t('avatar.dither'),
-        braille: t('avatar.braille'),
         cross: t('avatar.cross'),
+        braille: t('avatar.braille'),
         hatch: t('avatar.hatch'),
       }}
     />
@@ -88,11 +87,27 @@ const prefixLength = [...intro.prefix.replace(/\s/g, '')].length;
 
   .bio {
     display: grid;
-    gap: var(--space-4);
+    gap: var(--space-1);
     font-size: var(--text-body);
     line-height: var(--leading-body);
     color: var(--color-fg-muted);
     max-width: 34em;
+  }
+
+  /* Each line starts with an accent block, like the link cursor. */
+  .bio :global(p) {
+    display: flex;
+    gap: 0.6em;
+  }
+
+  .bio :global(p)::before {
+    content: "";
+    flex-shrink: 0;
+    width: 0.5em;
+    height: 1.05em;
+    /* Centre the block on the first line of text. */
+    margin-top: calc((var(--leading-body) - 1.05em) / 2);
+    background-color: var(--color-accent);
   }
 
   .bio :global(a) {

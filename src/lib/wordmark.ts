@@ -24,15 +24,12 @@ import {
   type ModeWave,
   type RenderMode,
 } from './mode-wave';
+import { drawMark } from './mode-marks';
 
 const FADE_MS = 1600;
 const TICK_MS = 90;
 const MIN_LENGTH = 6;
 const MAX_LENGTH = 18;
-const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v + 0.5) / 16);
-const BRAILLE: [number, number][] = [
-  [0, 1], [1, 2], [1, 0], [0, 3], [0, 0], [1, 3], [1, 1], [0, 2],
-];
 
 function start(root: HTMLElement) {
   const canvas = root.querySelector('canvas');
@@ -47,12 +44,24 @@ function start(root: HTMLElement) {
   const lit = Uint8Array.from(pattern, (ch) => (ch === '1' ? 1 : 0));
   const glowAt = new Float64Array(cols * rows).fill(-Infinity);
   const glowPeak = new Float32Array(cols * rows);
-  // Per cell: when the wave's accent band arrives, and when it has passed.
-  const bandAt = new Float64Array(cols * rows);
-  const switchAt = new Float64Array(cols * rows);
   let mode = readStoredMode();
-  let fromMode = mode;
+  // Waves still passing, oldest first, each with per-cell times for when its
+  // accent band arrives and when it has passed. Quick switches overlap: the
+  // newest wave that has reached a cell wins.
+  let sweeps: { mode: RenderMode; bandAt: Float64Array; switchAt: Float64Array; end: number }[] = [];
+  /** Style shown where no running wave has reached yet. */
+  let settled = mode;
   let transitionEnd = 0;
+
+  /** A cell's style now, and whether a wave's accent band is on it. */
+  function styleAt(i: number, now: number): [RenderMode, boolean] {
+    for (let k = sweeps.length - 1; k >= 0; k--) {
+      const sweep = sweeps[k];
+      if (now >= sweep.switchAt[i]) return [sweep.mode, false];
+      if (now >= sweep.bandAt[i]) return [sweep.mode, true];
+    }
+    return [settled, false];
+  }
 
   let cell = 0;
   let dpr = 1;
@@ -95,60 +104,7 @@ function start(root: HTMLElement) {
     ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
-  /** One cell in a render style. `s` is the cell size; marks use ~90% of it. */
-  function mark(m: RenderMode, x: number, y: number, s: number) {
-    const q = s * 0.9;
-    const cx = x + s / 2;
-    const cy = y + s / 2;
-    const c = ctx!;
-    switch (m) {
-      case 'ascii':
-        c.font = `600 ${s * 1.05}px ${fontFamily}`;
-        c.fillText('#', cx, cy + s * 0.04);
-        break;
-      case 'dots':
-        c.beginPath();
-        c.arc(cx, cy, q * 0.42, 0, Math.PI * 2);
-        c.fill();
-        break;
-      case 'dither': {
-        const sub = q / 4;
-        const ox = cx - q / 2;
-        const oy = cy - q / 2;
-        for (let k = 0; k < 16; k++) if (BAYER[k] < 0.62) c.fillRect(ox + (k % 4) * sub, oy + Math.floor(k / 4) * sub, sub, sub);
-        break;
-      }
-      case 'cross': {
-        const arm = q * 0.46;
-        const stroke = q * 0.24;
-        c.fillRect(cx - arm, cy - stroke / 2, arm * 2, stroke);
-        c.fillRect(cx - stroke / 2, cy - arm, stroke, arm * 2);
-        break;
-      }
-      case 'braille':
-        for (const [col, row] of BRAILLE) {
-          c.beginPath();
-          c.arc(cx + (col ? q * 0.22 : -q * 0.22), cy - q * 0.36 + row * q * 0.24, q * 0.12, 0, Math.PI * 2);
-          c.fill();
-        }
-        break;
-      case 'hatch': {
-        c.strokeStyle = c.fillStyle;
-        c.lineWidth = Math.max(1, s * 0.1);
-        c.beginPath();
-        for (const k of [-0.25, 0.25]) {
-          c.moveTo(x + Math.max(0, k * s), y + s + Math.min(0, k * s));
-          c.lineTo(x + s + Math.min(0, k * s), y + Math.max(0, k * s));
-        }
-        c.moveTo(x, y);
-        c.lineTo(x + s, y + s);
-        c.stroke();
-        break;
-      }
-      default:
-        c.fillRect(cx - q / 2, cy - q / 2, q, q);
-    }
-  }
+  const mark = (m: RenderMode, x: number, y: number, s: number) => drawMark(ctx!, m, x, y, s, fontFamily);
 
   function render(now: number) {
     const c = ctx!;
@@ -161,15 +117,15 @@ function start(root: HTMLElement) {
     for (let i = 0; i < lit.length; i++) {
       const x = (i % cols) * s;
       const y = Math.floor(i / cols) * s;
-      const m = now >= switchAt[i] ? mode : fromMode;
+      const [m, inBand] = styleAt(i, now);
       const glow = glowPeak[i] * Math.max(0, 1 - (now - glowAt[i]) / FADE_MS);
       if (glow > 0) animating = true;
 
       // Inside the wave's band: preview the new style in the accent colour.
-      if (now >= bandAt[i] && now < switchAt[i]) {
+      if (inBand) {
         c.fillStyle = colors.accent;
         c.globalAlpha = lit[i] || bodySet.has(i) ? 0.9 : 0.3;
-        mark(mode, x, y, s);
+        mark(m, x, y, s);
         continue;
       }
 
@@ -315,16 +271,19 @@ function start(root: HTMLElement) {
     const wave = (event as CustomEvent<ModeWave>).detail;
     if (!wave || wave.mode === mode) return;
     const now = performance.now();
-    fromMode = now < transitionEnd ? fromMode : mode;
+    // Waves that have passed every cell are settled.
+    while (sweeps.length && now >= sweeps[0].end) settled = sweeps.shift()!.mode;
     mode = wave.mode;
     if (reducedMotion) {
-      bandAt.fill(0);
-      switchAt.fill(0);
+      sweeps = [];
+      settled = mode;
       transitionEnd = 0;
     } else {
       // Same timing as the other layers: the band arrives, then the new style.
       const rect = canvas.getBoundingClientRect();
       const band = WAVE_WIDTH / WAVE_SPEED;
+      const bandAt = new Float64Array(cols * rows);
+      const switchAt = new Float64Array(cols * rows);
       let end = now;
       for (let i = 0; i < switchAt.length; i++) {
         const x = rect.left + ((i % cols) + 0.5) * cell;
@@ -333,7 +292,8 @@ function start(root: HTMLElement) {
         switchAt[i] = bandAt[i] + band;
         end = Math.max(end, switchAt[i]);
       }
-      transitionEnd = end;
+      sweeps.push({ mode: wave.mode, bandAt, switchAt, end });
+      transitionEnd = Math.max(transitionEnd, end);
     }
     kick();
     if (!visible) render(now);

@@ -40,31 +40,32 @@ export const site = {
   meta: {
     zh: {
       title: 'Karl Lee',
-      description: 'Karl 的个人主页与博客：工具、界面和一些好玩的小实验。',
+      description: 'Karl 的个人网站：写过的文章、做过的小东西和常去的链接。',
     },
     en: {
       title: 'Karl Lee',
-      description: "Karl's homepage and blog — tools, interfaces and small experiments.",
+      description: "Karl's website: writing, things I've made, and links.",
     },
   },
 
   intro: {
     zh: {
-      hello: '你好，我是 Karl。',
-      prefix: '一个喜欢折腾',
-      words: ['小工具', '界面', '终端', '像素'],
-      suffix: '的 geek。',
-      bio: [
-        '我相信好的东西应该小而快，并且带一点点乐趣。这里记录我在做的东西、读到的东西，以及偶尔冒出来的想法。',
-      ],
+      // The greeting is English on both locales.
+      hello: "Hello, I'm Karl :)",
+      prefix: '写代码，也做些',
+      words: ['小工具', '小网页', '像素画', '小实验'],
+      suffix: '。',
+      // One line each, shown with a block marker in front.
+      bio: ['不定期搓一些小而快，并且带一点点乐趣的东西。', '这里放我写的文章、做过的东西和常去的链接。'],
     },
     en: {
-      hello: "Hi, I'm Karl.",
-      prefix: 'A geek who tinkers with ',
-      words: ['tools', 'interfaces', 'terminals', 'pixels'],
+      hello: "Hello, I'm Karl :)",
+      prefix: 'I write code and make ',
+      words: ['small tools', 'tiny websites', 'pixel art', 'little experiments'],
       suffix: '.',
       bio: [
-        'I like things that are small, fast and a little bit fun. This is where I keep what I build, what I read, and the odd idea in between.',
+        'Every now and then I hack together small, quick things with a little fun in them.',
+        "Here you'll find my writing, things I've made, and links I keep going back to.",
       ],
     },
   },

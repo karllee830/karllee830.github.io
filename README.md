@@ -56,10 +56,10 @@ The avatar must be a pixel-art SVG built from `<rect>` elements with a `viewBox`
 ## Design notes
 
 - **Tokens.** Every colour, spacing, radius, type size and duration is a CSS custom property in `tokens.css`. Spacing and radii sit on a 4px grid.
-- **Concentric corners.** A nested surface uses the parent radius minus the padding between them (for example the hero frame is 24px with 8px padding, so the canvas and controls inside use 16px).
+- **Concentric corners.** A nested surface uses the parent radius minus the padding between them (for example a 32px segmented control with 4px inset has 8px-radius segments inside a 12px-radius frame).
 - **Continuous corners.** Rounded surfaces use the `.sq` class. Browsers that support `corner-shape: squircle` render it natively; elsewhere (Safari, Firefox) [`src/lib/squircle.ts`](src/lib/squircle.ts) applies an equivalent clip-path and draws `.sq-line` borders as a 1px ring so they follow the curve.
 - **Colour.** Neutral greys only, plus one accent taken from the avatar's cap band (`#669fd0`). Surfaces are flat; the link cards are the one tactile exception (raised gradient, keycap icon, and a dark tray that slides out with the URL), with their shadow tokens in `tokens.css`.
-- **Motion.** Per-character reveal on headings, a decode effect on the rotating word, and an ASCII / pixel / halftone rendering of the avatar that reacts to the pointer. The canvas loop only runs while something moves and pauses off-screen. `prefers-reduced-motion` turns the decorative motion off.
+- **Motion.** Per-character reveal on headings, a decode effect on the rotating word, and a canvas rendering of the avatar that cycles through seven styles (ASCII, dither, pixel, dots, cross, braille, hatch); each switch sends one ripple across the page margins and footer, and the pointer reveals the original colours. The canvas loop only runs while something moves and pauses off-screen. `prefers-reduced-motion` turns the decorative motion off.
 
 ## Performance
 
