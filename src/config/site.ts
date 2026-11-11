@@ -31,6 +31,12 @@ export const site = {
     label: 'comment',
   },
 
+  /** Mainland China filing numbers; remove an entry to hide it. */
+  beian: {
+    icp: '京ICP备2022003459号-3',
+    police: { text: '京公网安备11010502051390号', code: '11010502051390' },
+  },
+
   meta: {
     zh: {
       title: 'Karl Lee',

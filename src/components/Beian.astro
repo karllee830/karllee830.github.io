@@ -1,0 +1,64 @@
+---
+// ICP and public-security filing numbers. Text stays faint; the police
+// badge (official icon, 3x PNG) is desaturated until hovered.
+import { site } from '../config/site';
+import { withBase } from '../lib/url';
+
+interface Props {
+  class?: string;
+}
+
+const { class: className } = Astro.props;
+const { icp, police } = site.beian;
+---
+
+{
+  (icp || police) && (
+    <p class:list={['beian', className]}>
+      {icp && (
+        <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener">
+          {icp}
+        </a>
+      )}
+      {police && (
+        <a href={`https://beian.mps.gov.cn/#/query/webSearch?code=${police.code}`} target="_blank" rel="noopener">
+          <img class="badge" src={withBase('/beian-police.png')} width="14" height="15" alt="" decoding="async" loading="lazy" />
+          {police.text}
+        </a>
+      )}
+    </p>
+  )
+}
+
+<style>
+  .beian {
+    display: grid;
+    justify-items: start;
+    gap: var(--space-1);
+    font-size: var(--text-caption);
+    line-height: var(--leading-caption);
+    white-space: nowrap;
+  }
+
+  a {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    color: color-mix(in srgb, var(--color-fg-subtle) 75%, transparent);
+    transition: color var(--duration-fast) var(--ease-out);
+  }
+
+  a:hover {
+    color: var(--color-fg-muted);
+  }
+
+  .badge {
+    flex-shrink: 0;
+    filter: saturate(0.3);
+    transition: filter var(--duration-base) var(--ease-out);
+  }
+
+  a:hover .badge {
+    filter: none;
+  }
+</style>

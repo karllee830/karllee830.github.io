@@ -3,6 +3,7 @@ import MiniAvatar from './MiniAvatar.astro';
 import ThemeSwitch from './ThemeSwitch.astro';
 import LangSwitch from './LangSwitch.astro';
 import Outline from './Outline.astro';
+import Beian from './Beian.astro';
 import { site } from '../config/site';
 import { localePath, useTranslations, type Lang, type OutlineItem } from '../i18n/ui';
 
@@ -59,6 +60,7 @@ const items = [
 <div class="nav-tools is-side">
   <LangSwitch lang={lang} hrefs={langHrefs} />
   <ThemeSwitch lang={lang} />
+  <Beian class="side-beian" />
 </div>
 </div>
 
@@ -268,7 +270,10 @@ const items = [
    */
   @media (min-width: 1024px) {
     .nav-slot {
-      --tools-height: calc(2 * var(--control-md) + var(--space-2));
+      /* Two switches plus the two filing lines below them. */
+      --tools-height: calc(
+        2 * var(--control-md) + var(--space-2) + var(--space-4) + 2 * var(--leading-caption) + var(--space-1)
+      );
       display: grid;
       grid-template: 1fr / 1fr;
       height: auto;
@@ -328,11 +333,19 @@ const items = [
       display: none;
     }
 
+    .nav-tools.is-side :global(.side-beian) {
+      margin-top: var(--space-2);
+      /* The filing lines may use the column's right padding. */
+      margin-right: calc(-1 * var(--space-6));
+    }
+
     .nav-tools.is-side {
       grid-area: 1 / 1;
       position: sticky;
       bottom: var(--space-12);
       align-self: end;
+      justify-self: start;
+      margin-left: 0;
       display: flex;
       flex-direction: column;
       align-items: flex-start;

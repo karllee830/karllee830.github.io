@@ -73,6 +73,8 @@
   --content-width: 640px;
   --layout-gap: var(--space-16);
   --frame-padding: var(--space-12);
+  /* Space between the frame's left edge and the sidebar. */
+  --sidebar-inset: var(--space-8);
   --page-gutter: var(--space-4);
   --topbar-height: 56px;
 
