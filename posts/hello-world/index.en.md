@@ -1,58 +1,89 @@
 ---
-title: Hello, world
-description: The first post on this site, and how to write one here.
-date: 2026-11-11
-tags: [meta, astro]
+title: Hello World
+description: A typesetting style test.
+date: 2026-11-12
+tags: [test]
 ---
 
-This is the first post on the blog. The site is built with [Astro](https://astro.build); posts are Markdown files in the repository, and pushing to GitHub builds and publishes them to GitHub Pages.
+A plain paragraph with mixed scripts 中文混排, **bold**, *italic*, ~~strikethrough~~, `inline code`, an [internal link](/en/blog/) and an [external link](https://astro.build), plus keys <kbd>⌘</kbd> + <kbd>K</kbd>.
 
-## Writing a new post
+A second paragraph to check paragraph spacing and how longer text wraps: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
 
-Create a folder under `posts/` with an `index.md` and the images it uses:
+## Heading level 2
 
-```text
-posts/
-└── my-new-post/
-    ├── index.md
-    ├── index.en.md   # optional English version
-    └── cover.png
-```
+### Heading level 3
 
-`index.md` starts with frontmatter:
+#### Heading level 4
 
-```yaml
----
-title: Post title
-description: One-line summary (optional)
-date: 2026-11-11
-lang: zh        # zh or en
-tags: [notes]
-draft: false    # true keeps it to local previews
----
-```
+Body text right after a heading.
 
-Reference images with relative paths; they are compressed and resized at build time:
+## Lists
 
-![Pixel avatar](./avatar.png)
+- Unordered item
+- Item with `code`
+  - Nested item
+  - Nested item
+- Unordered item
 
-## Some typesetting
+1. Ordered item
+2. Ordered item
+   1. Nested ordered item
+   2. Nested ordered item
+3. Ordered item
 
-> Good things should be small and fast, with a little fun in them.
+- [x] Done task
+- [ ] Open task
 
-- First item
-- Second item, with a bit of `inline code`
-- Third item
+## Quote
 
-| Key | What it does |
-| --- | --- |
-| `date` | Publish date, sets the order |
-| `lang` | Language of the text |
-| `draft` | Drafts stay off the live site |
+> A quoted paragraph.
+>
+> A second paragraph in the quote, with **emphasis**.
+
+## Code
 
 ```ts
+interface Post {
+  title: string;
+  date: Date;
+}
+
 const greet = (name: string) => `Hello, ${name}!`;
 console.log(greet('world'));
 ```
 
-Comments at the bottom come from GitHub Issues; sign in with GitHub to leave one.
+```bash
+npm install
+npm run dev
+```
+
+```css
+.prose {
+  color: var(--color-fg);
+}
+```
+
+## Table
+
+| Left | Center | Right |
+| :--- | :---: | ---: |
+| Cell | Cell | 1 |
+| A longer cell | `code` | 100 |
+
+## Image
+
+![A soft gradient in the site blue](./gradient.jpg)
+
+## Rule
+
+Above the rule.
+
+---
+
+Below the rule.
+
+## Footnote
+
+A sentence with a footnote[^1].
+
+[^1]: The footnote text.

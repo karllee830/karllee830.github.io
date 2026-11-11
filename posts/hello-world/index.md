@@ -1,58 +1,90 @@
 ---
-title: 你好，世界
-description: 这个站点的第一篇文章，顺便说明怎么在这里写东西。
-date: 2026-11-11
+title: Hello World
+description: 排版样式测试。
+date: 2026-11-12
 lang: zh
-tags: [meta, astro]
+tags: [test]
 ---
 
-这是博客的第一篇文章。整个站点基于 [Astro](https://astro.build) 构建，文章就是仓库里的 Markdown 文件，推送到 GitHub 之后会自动构建并发布到 GitHub Pages。
+一段普通正文，中英文混排 English text，带 **粗体**、*斜体*、~~删除线~~、`行内代码`、[站内链接](/blog/) 和 [外部链接](https://astro.build)，以及键盘按键 <kbd>⌘</kbd> + <kbd>K</kbd>。
 
-## 怎么写一篇新文章
+第二段正文，用来检查段落间距和较长文本的换行效果：Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
 
-在 `posts/` 下新建一个文件夹，放进 `index.md` 和要用到的图片：
+## 二级标题
 
-```text
-posts/
-└── my-new-post/
-    ├── index.md
-    └── cover.png
-```
+### 三级标题
 
-`index.md` 的开头是一段 frontmatter：
+#### 四级标题
 
-```yaml
----
-title: 文章标题
-description: 一句话摘要（可选）
-date: 2026-11-11
-lang: zh        # zh 或 en
-tags: [notes]
-draft: false    # true 时只在本地预览可见
----
-```
+紧跟在标题后面的正文。
 
-图片用相对路径引用即可，构建时会自动压缩并生成合适的尺寸：
+## 列表
 
-![像素头像](./avatar.png)
+- 无序列表项
+- 带 `代码` 的列表项
+  - 嵌套列表项
+  - 嵌套列表项
+- 无序列表项
 
-## 一些排版
+1. 有序列表项
+2. 有序列表项
+   1. 嵌套有序列表项
+   2. 嵌套有序列表项
+3. 有序列表项
 
-> 好的东西应该小而快，并且带一点点乐趣。
+- [x] 已完成的任务
+- [ ] 未完成的任务
 
-- 列表项一
-- 列表项二，带一点 `inline code`
-- 列表项三
+## 引用
 
-| 键 | 作用 |
-| --- | --- |
-| `date` | 发布日期，决定排序 |
-| `lang` | 文章语言，决定所在的语言路径 |
-| `draft` | 草稿不会出现在线上 |
+> 一段引用文字。
+>
+> 引用里的第二段，带 **强调**。
+
+## 代码
 
 ```ts
+interface Post {
+  title: string;
+  date: Date;
+}
+
 const greet = (name: string) => `Hello, ${name}!`;
 console.log(greet('world'));
 ```
 
-文章底部的评论来自 GitHub Issues，登录 GitHub 就能留言。
+```bash
+npm install
+npm run dev
+```
+
+```css
+.prose {
+  color: var(--color-fg);
+}
+```
+
+## 表格
+
+| 左对齐 | 居中 | 右对齐 |
+| :--- | :---: | ---: |
+| 单元格 | 单元格 | 1 |
+| 较长的单元格内容 | `code` | 100 |
+
+## 图片
+
+![站点蓝色的柔和渐变](./gradient.jpg)
+
+## 分隔线
+
+上方内容。
+
+---
+
+下方内容。
+
+## 脚注
+
+带脚注的一句话[^1]。
+
+[^1]: 脚注内容。
