@@ -20,6 +20,9 @@ const intro = site.intro[lang];
 const posts = (await listPosts(lang)).slice(0, 5);
 const helloLength = [...intro.hello.replace(/\s/g, '')].length;
 const prefixLength = [...intro.prefix.replace(/\s/g, '')].length;
+// The rotating word's first entry is revealed in sequence, then the suffix.
+const wordStart = helloLength + prefixLength;
+const wordLength = [...(intro.words[0] ?? '').replace(/\s/g, '')].length;
 ---
 
 <BaseLayout lang={lang} section="home" routes={{ zh: '/', en: '/' }}>
@@ -27,7 +30,7 @@ const prefixLength = [...intro.prefix.replace(/\s/g, '')].length;
     <h1 id="hero-title" class="statement">
       <span class="hello" lang={lang === 'en' ? undefined : 'en'}><RevealText text={intro.hello} /></span>
       <span class="sub">
-        <RevealText text={intro.prefix} start={helloLength} /><span class="word"><ScrambleText client:idle words={intro.words} /></span><RevealText text={intro.suffix} start={helloLength + prefixLength + 2} />
+        <RevealText text={intro.prefix} start={helloLength} /><span class="word"><ScrambleText client:idle words={intro.words} revealStart={wordStart} /></span><RevealText text={intro.suffix} start={wordStart + wordLength} />
       </span>
     </h1>
 
