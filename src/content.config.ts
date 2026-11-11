@@ -2,15 +2,26 @@ import { defineCollection } from 'astro:content';
 import { glob } from 'astro/loaders';
 import { z } from 'astro/zod';
 
-/** Turns "posts/my-post/index.md" or "posts/my-post.md" into "my-post". */
+// A translation sits next to the original as "index.en.md" (or "index.zh.md").
+const LANG_SUFFIX = /\.(zh|en)$/i;
+
+/**
+ * Turns "posts/my-post/index.md" or "posts/my-post.md" into "my-post", and the translation
+ * "posts/my-post/index.en.md" into "my-post.en", so both versions share the slug "my-post".
+ */
 function postId(entry: string, slug?: unknown): string {
-  if (typeof slug === 'string' && slug.trim()) return slug.trim().replace(/^\/+|\/+$/g, '');
-  return entry
-    .replace(/\.md$/i, '')
-    .replace(/(^|\/)index$/i, '')
-    .split('/')
-    .map((part) => part.trim().toLowerCase().replace(/\s+/g, '-'))
-    .join('/');
+  const path = entry.replace(/\.md$/i, '');
+  const suffix = LANG_SUFFIX.exec(path)?.[1].toLowerCase();
+  const id =
+    typeof slug === 'string' && slug.trim()
+      ? slug.trim().replace(/^\/+|\/+$/g, '')
+      : path
+          .replace(LANG_SUFFIX, '')
+          .replace(/(^|\/)index$/i, '')
+          .split('/')
+          .map((part) => part.trim().toLowerCase().replace(/\s+/g, '-'))
+          .join('/');
+  return suffix ? `${id}.${suffix}` : id;
 }
 
 const blog = defineCollection({

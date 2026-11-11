@@ -4,7 +4,6 @@ import { postPaths } from '../../lib/post-paths';
 
 export const getStaticPaths = () => postPaths('zh');
 
-const { post, prev, next } = Astro.props;
 ---
 
-<PostView post={post} prev={prev} next={next} />
+<PostView {...Astro.props} />

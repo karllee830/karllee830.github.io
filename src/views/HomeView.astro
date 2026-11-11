@@ -8,7 +8,7 @@ import AsciiAvatar from '../components/react/AsciiAvatar';
 import ScrambleText from '../components/react/ScrambleText';
 import { site } from '../config/site';
 import { localePath, useTranslations, type Lang } from '../i18n/ui';
-import { getPosts } from '../lib/posts';
+import { listPosts } from '../lib/posts';
 
 interface Props {
   lang: Lang;
@@ -17,7 +17,7 @@ interface Props {
 const { lang } = Astro.props;
 const t = useTranslations(lang);
 const intro = site.intro[lang];
-const posts = (await getPosts()).slice(0, 5);
+const posts = (await listPosts(lang)).slice(0, 5);
 const helloLength = [...intro.hello.replace(/\s/g, '')].length;
 const prefixLength = [...intro.prefix.replace(/\s/g, '')].length;
 ---

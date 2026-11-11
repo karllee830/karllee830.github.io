@@ -6,7 +6,7 @@ lang: en
 tags: [meta]
 ---
 
-This is a placeholder post in English. Posts written in English live under `/en/blog/`, while Chinese posts live under `/blog/`. Both lists show every post, with a small tag when a post is in the other language.
+This is a placeholder post in English, with no Chinese version. It shows on both blog indexes with an EN badge; opened from the Chinese side, the interface stays in Chinese and only the text is English.
 
 ## Writing
 

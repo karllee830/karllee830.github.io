@@ -1,27 +1,27 @@
 ---
-import { formatDate, formatMonthDay, postHref, type Post } from '../lib/posts';
+import LangBadge from './LangBadge.astro';
+import { formatDate, formatMonthDay, postHref, type PostEntry } from '../lib/posts';
 import type { Lang } from '../i18n/ui';
 
 interface Props {
-  posts: Post[];
+  posts: PostEntry[];
   lang: Lang;
   /** Show month-day only (when the list is already grouped by year). */
   short?: boolean;
 }
 
 const { posts, lang, short = false } = Astro.props;
-const tag = { zh: '中文', en: 'EN' } as const;
 ---
 
 <ul class="post-list">
   {
-    posts.map((post) => (
+    posts.map(({ post, langs }) => (
       <li>
-        <a class="row sq" href={postHref(post)} lang={post.data.lang === lang ? undefined : post.data.lang === 'zh' ? 'zh-CN' : 'en'}>
+        <a class="row sq" href={postHref(post, lang)} lang={post.data.lang === lang ? undefined : post.data.lang === 'zh' ? 'zh-CN' : 'en'}>
           <span class="title cursor">{post.data.title}</span>
           <span class="meta">
-            {post.data.lang !== lang && <span class="lang-tag">{tag[post.data.lang]}</span>}
-            {post.data.draft && <span class="lang-tag">draft</span>}
+            {post.data.draft && <span class="draft-tag">draft</span>}
+            <LangBadge langs={langs} current={post.data.lang} lang={lang} />
             <time class="mono" datetime={post.data.date.toISOString()}>
               {short ? formatMonthDay(post.data.date) : formatDate(post.data.date)}
             </time>
@@ -73,14 +73,14 @@ const tag = { zh: '中文', en: 'EN' } as const;
 
   .meta {
     display: inline-flex;
-    align-items: baseline;
+    align-items: center;
     gap: var(--space-2);
     flex-shrink: 0;
     color: var(--color-fg-subtle);
     transition: color var(--duration-fast) var(--ease-out);
   }
 
-  .lang-tag {
+  .draft-tag {
     font-size: var(--text-caption);
     line-height: var(--leading-caption);
   }

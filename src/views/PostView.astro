@@ -4,23 +4,34 @@ import { render } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Comments from '../components/Comments.astro';
 import Icon from '../components/Icon.astro';
+import LangBadge from '../components/LangBadge.astro';
 import { site } from '../config/site';
-import { localePath, useTranslations, type OutlineItem } from '../i18n/ui';
+import { localePath, useTranslations, type Lang, type OutlineItem } from '../i18n/ui';
 import { withBase } from '../lib/url';
-import { formatDate, postHref, readingMinutes, type Post } from '../lib/posts';
+import { formatDate, postHref, postSlug, readingMinutes, type Post, type PostEntry } from '../lib/posts';
 import '../styles/prose.css';
 
 interface Props {
-  post: Post;
+  /** The version shown here, and every language the post is written in. */
+  entry: PostEntry;
+  /** Locale of this page: the interface is in it, the text in the post's own language. */
+  lang: Lang;
   prev?: Post;
   next?: Post;
 }
 
-const { post, prev, next } = Astro.props;
-const { title, description, date, updated, lang, tags, cover, coverAlt } = post.data;
+const { entry, lang, prev, next } = Astro.props;
+const { post, langs: versions } = entry;
+const { title, description, date, updated, tags, cover, coverAlt } = post.data;
+const textLang = post.data.lang;
+// Marks text written in another language than the page, for fonts and screen readers.
+const foreign = textLang === lang ? undefined : textLang === 'zh' ? 'zh-CN' : 'en';
 const t = useTranslations(lang);
 const { Content, headings } = await render(post);
 const minutes = readingMinutes(post.body);
+const slug = postSlug(post);
+// Each version of a translated post lives in its own locale; the badge links across.
+const otherHrefs = Object.fromEntries(versions.filter((l) => l !== lang).map((l) => [l, localePath(l, `/blog/${slug}/`)]));
 
 const outline: OutlineItem[] = [
   { id: 'post-title', text: t('outline.intro'), depth: 2 },
@@ -30,11 +41,11 @@ const outline: OutlineItem[] = [
 
 // The pager always offers two ways on: neighbours, or the index and home at the ends.
 const prevLink = prev
-  ? { href: postHref(prev), label: t('post.prev'), title: prev.data.title, rel: 'prev' }
-  : { href: localePath(lang, '/blog/'), label: t('post.prev'), title: t('post.back'), rel: undefined };
+  ? { href: postHref(prev, lang), label: t('post.prev'), title: prev.data.title, rel: 'prev', lang: prev.data.lang }
+  : { href: localePath(lang, '/blog/'), label: t('post.prev'), title: t('post.back'), rel: undefined, lang };
 const nextLink = next
-  ? { href: postHref(next), label: t('post.next'), title: next.data.title, rel: 'next' }
-  : { href: localePath(lang, '/'), label: t('post.next'), title: t('post.home'), rel: undefined };
+  ? { href: postHref(next, lang), label: t('post.next'), title: next.data.title, rel: 'next', lang: next.data.lang }
+  : { href: localePath(lang, '/'), label: t('post.next'), title: t('post.home'), rel: undefined, lang };
 ---
 
 <BaseLayout
@@ -42,8 +53,8 @@ const nextLink = next
   title={title}
   description={description}
   section="blog"
-  routes={{ [lang]: `/blog/${post.id}/` }}
-  fallbackRoute="/blog/"
+  routes={{ zh: `/blog/${slug}/`, en: `/blog/${slug}/` }}
+  canonicalLang={versions.length > 1 ? undefined : textLang}
   type="article"
   publishedTime={date}
   outline={outline}
@@ -53,11 +64,13 @@ const nextLink = next
       <a class="back pill-link cursor sq" href={localePath(lang, '/blog/')}>
         {t('post.back')}
       </a>
-      <h1 id="post-title">{title}</h1>
+      <h1 id="post-title" lang={foreign}>{title}</h1>
       <p class="meta">
         <time class="mono" datetime={date.toISOString()}>{formatDate(date)}</time>
         <span aria-hidden="true">·</span>
         <span>{minutes} {t('post.minutes')}</span>
+        <span aria-hidden="true">·</span>
+        <LangBadge langs={versions} current={textLang} lang={lang} hrefs={otherHrefs} />
         {
           updated && (
             <>
@@ -71,7 +84,7 @@ const nextLink = next
       </p>
       {
         tags.length > 0 && (
-          <ul class="tags">
+          <ul class="tags" lang={foreign}>
             {tags.map((tag) => (
               <li class="mono">#{tag}</li>
             ))}
@@ -86,7 +99,7 @@ const nextLink = next
       )
     }
 
-    <div class="prose">
+    <div class="prose" lang={foreign}>
       <Content />
     </div>
   </article>
@@ -115,16 +128,16 @@ const nextLink = next
       </div>
     </aside>
 
-    {site.comments.enabled && <Comments lang={lang} term={`blog/${post.id}`} />}
+    {site.comments.enabled && <Comments lang={lang} term={`blog/${slug}`} />}
 
     <nav class="pager" aria-label={`${t('post.prev')} / ${t('post.next')}`}>
       <a class="pager-card sq sq-line" href={prevLink.href} rel={prevLink.rel}>
         <span class="pager-label">{prevLink.label}</span>
-        <span class="pager-title"><span class="cursor">{prevLink.title}</span></span>
+        <span class="pager-title" lang={prevLink.lang === lang ? undefined : prevLink.lang}><span class="cursor">{prevLink.title}</span></span>
       </a>
       <a class="pager-card next sq sq-line" href={nextLink.href} rel={nextLink.rel}>
         <span class="pager-label">{nextLink.label}</span>
-        <span class="pager-title"><span class="cursor">{nextLink.title}</span></span>
+        <span class="pager-title" lang={nextLink.lang === lang ? undefined : nextLink.lang}><span class="cursor">{nextLink.title}</span></span>
       </a>
     </nav>
   </div>

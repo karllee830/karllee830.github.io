@@ -1,0 +1,86 @@
+---
+import { useTranslations, type Lang } from '../i18n/ui';
+
+interface Props {
+  /** Languages the post is written in. */
+  langs: Lang[];
+  /** The version being shown; marked when the post has both. */
+  current: Lang;
+  /** Language of the page, for the accessible label. */
+  lang: Lang;
+  /** Links to other versions, so the badge can switch between them. */
+  hrefs?: Partial<Record<Lang, string>>;
+}
+
+const { langs, current, lang, hrefs = {} } = Astro.props;
+const t = useTranslations(lang);
+const both = langs.length > 1;
+const label = both ? t('badge.both') : t(langs[0] === 'zh' ? 'badge.zh' : 'badge.en');
+const text = { zh: '中', en: 'EN' } as const;
+const htmlLang = { zh: 'zh-CN', en: 'en' } as const;
+// A link to the other version is named by its language, in that language.
+const langName = { zh: '中文', en: 'English' } as const;
+---
+
+<span class:list={['lang-badge sq sq-line', { 'is-both': both }]} title={label}>
+  <span class="sr-only">{label}</span>
+  {
+    langs.map((l) => {
+      const href = both && l !== current ? hrefs[l] : undefined;
+      return href ? (
+        <a class="part sq" href={href} hreflang={htmlLang[l]} lang={htmlLang[l]} aria-label={langName[l]}>{text[l]}</a>
+      ) : (
+        <span class="part sq" aria-hidden="true" data-current={both && l === current ? '' : undefined}>{text[l]}</span>
+      );
+    })
+  }
+</span>
+
+<style>
+  /* 20px tall, 2px inset, radius 6 → parts 16px tall with radius 4 (6 − 2). */
+  .lang-badge {
+    --sq-r: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    height: 20px;
+    padding: 1px;
+    font-size: 11px;
+    line-height: 1;
+    font-weight: var(--weight-medium);
+    letter-spacing: 0.02em;
+    color: var(--color-fg-subtle);
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+
+  .part {
+    --sq-r: 4px;
+    display: inline-grid;
+    place-items: center;
+    min-width: 20px;
+    height: 16px;
+    padding: 0 5px;
+    color: inherit;
+    text-decoration: none;
+    transition:
+      color var(--duration-fast) var(--ease-out),
+      background-color var(--duration-fast) var(--ease-out);
+  }
+
+  /* A one-language badge reads as a plain label. */
+  .lang-badge:not(.is-both) .part {
+    color: var(--color-fg-muted);
+  }
+
+  /* Bilingual: the version on screen is lit, like a segmented control. */
+  .part[data-current] {
+    color: var(--color-fg);
+    background-color: var(--color-line);
+  }
+
+  a.part:hover {
+    color: var(--color-fg);
+    background-color: var(--color-hover);
+  }
+</style>

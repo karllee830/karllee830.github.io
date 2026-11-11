@@ -3,7 +3,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import RevealText from '../components/RevealText.astro';
 import PostList from '../components/PostList.astro';
 import { useTranslations, type Lang } from '../i18n/ui';
-import { getPosts, type Post } from '../lib/posts';
+import { listPosts, type PostEntry } from '../lib/posts';
 
 interface Props {
   lang: Lang;
@@ -11,12 +11,13 @@ interface Props {
 
 const { lang } = Astro.props;
 const t = useTranslations(lang);
-const posts = await getPosts();
+// One entry per post; a translated post is listed once, in this page's language.
+const posts = await listPosts(lang);
 
-const years = new Map<number, Post[]>();
-for (const post of posts) {
-  const year = post.data.date.getUTCFullYear();
-  years.set(year, [...(years.get(year) ?? []), post]);
+const years = new Map<number, PostEntry[]>();
+for (const entry of posts) {
+  const year = entry.post.data.date.getUTCFullYear();
+  years.set(year, [...(years.get(year) ?? []), entry]);
 }
 const outline = [...years.keys()].map((year) => ({ id: `year-${year}`, text: String(year), depth: 2 }));
 ---

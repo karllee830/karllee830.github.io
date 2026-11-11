@@ -23,19 +23,38 @@ interface Props {
   outline?: OutlineItem[];
   type?: 'website' | 'article';
   publishedTime?: Date;
+  /**
+   * When this page shows content written for another locale (an untranslated post seen
+   * from the other language), the locale whose page is canonical. Such a page lists no
+   * hreflang alternates, since it is not a translation.
+   */
+  canonicalLang?: Lang;
 }
 
-const { lang, title, description, section = 'none', routes = {}, fallbackRoute = '/', outline = [], type = 'website', publishedTime } = Astro.props;
+const {
+  lang,
+  title,
+  description,
+  section = 'none',
+  routes = {},
+  fallbackRoute = '/',
+  outline = [],
+  type = 'website',
+  publishedTime,
+  canonicalLang,
+} = Astro.props;
 const t = useTranslations(lang);
 const meta = site.meta[lang];
 const pageTitle = title ? `${title} · ${meta.title}` : meta.title;
 const pageDescription = description ?? meta.description;
 
-const canonical = new URL(Astro.url.pathname, Astro.site);
 const langHrefs = Object.fromEntries(
   langs.map((l) => [l, withBase(localeRoute(l, routes[l] ?? fallbackRoute))]),
 ) as Record<Lang, string>;
-const alternates = langs.filter((l) => routes[l]).map((l) => ({ lang: htmlLang[l], href: new URL(langHrefs[l], Astro.site).href }));
+const canonical = new URL(canonicalLang ? langHrefs[canonicalLang] : Astro.url.pathname, Astro.site);
+const alternates = canonicalLang
+  ? []
+  : langs.filter((l) => routes[l]).map((l) => ({ lang: htmlLang[l], href: new URL(langHrefs[l], Astro.site).href }));
 const avatarUrl = withBase('/avatar.png');
 const ogImage = new URL(avatarUrl, Astro.site);
 ---

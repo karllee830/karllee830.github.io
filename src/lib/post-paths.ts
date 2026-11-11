@@ -1,11 +1,14 @@
 import type { Lang } from '../i18n/ui';
-import { getPosts } from './posts';
+import { listPosts, postSlug } from './posts';
 
-/** Static paths for posts written in `lang`, with neighbours for the pager. */
+/**
+ * Static paths for one locale: a page for every post, showing the version in that
+ * language when there is one and the original otherwise, with neighbours for the pager.
+ */
 export async function postPaths(lang: Lang) {
-  const posts = await getPosts(lang);
-  return posts.map((post, index) => ({
-    params: { slug: post.id },
-    props: { post, prev: posts[index + 1], next: posts[index - 1] },
+  const entries = await listPosts(lang);
+  return entries.map((entry, index) => ({
+    params: { slug: postSlug(entry.post) },
+    props: { entry, lang, prev: entries[index + 1]?.post, next: entries[index - 1]?.post },
   }));
 }
