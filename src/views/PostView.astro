@@ -107,6 +107,10 @@ const nextLink = next
     <div class="prose" lang={foreign}>
       <Content />
     </div>
+
+    <p class="license">
+      {t('post.licenseBefore')}<a href={t('post.licenseHref')} rel="license noopener">CC BY-NC-ND 4.0</a>{t('post.licenseAfter')}
+    </p>
   </article>
 
   <div class="after">
@@ -198,6 +202,31 @@ const nextLink = next
     font-size: var(--text-caption);
     line-height: var(--leading-caption);
     color: var(--color-fg-muted);
+  }
+
+  /* The license line closes the post, set apart from the text by a hairline. */
+  .license {
+    margin-top: var(--space-10);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--color-line);
+    font-size: var(--text-caption);
+    line-height: var(--leading-caption);
+    color: var(--color-fg-subtle);
+  }
+
+  .license a {
+    color: var(--color-fg-muted);
+    text-decoration: underline;
+    text-decoration-color: var(--color-line-strong);
+    text-underline-offset: 3px;
+    transition:
+      color var(--duration-fast) var(--ease-out),
+      text-decoration-color var(--duration-fast) var(--ease-out);
+  }
+
+  .license a:hover {
+    color: var(--color-fg);
+    text-decoration-color: currentColor;
   }
 
   .post :global(.cover) {
