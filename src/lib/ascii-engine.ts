@@ -9,8 +9,9 @@ import { buildAvatarModel } from './avatar-model';
  * halftone dot (Dots) or a 4×4 ordered-dither cell (Dither). Units outside
  * the figure form a quiet background in the same style.
  *
- * The pointer carries a lens that eases after it: figure pixels inside it
- * show their original colours, with a pixel-dither dissolve at the rim.
+ * The pointer carries a lens that eases after it: inside it the figure is
+ * drawn in the same style but with each pixel's original colour, with a
+ * pixel-dither dissolve at the rim.
  * Around it the current mode's accent effect glows and fades outward
  * (over empty background it fills the lens too), leaving a short trail.
  * Taps send out a ripple.
@@ -39,6 +40,37 @@ const LENS_GROW = 0.8; // per-frame easing of the lens radius
 const RIPPLE_SPEED = 0.4;
 const RIPPLE_WIDTH = 24;
 const RIPPLE_LIFE = 1400;
+
+// Faint dark edge around marks drawn in original colours, so pale colours
+// (the white cap, the light shirt) stay legible on a light background.
+const TINT_OUTLINE = 'rgba(0, 0, 0, 0.16)';
+
+function hexToRgb(hex: string): [number, number, number] {
+  const v = hex.trim().replace('#', '');
+  const full = v.length === 3 ? [...v].map((c) => c + c).join('') : v;
+  const n = parseInt(full, 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function relativeLuminance([r, g, b]: [number, number, number]) {
+  const lin = (c: number) => {
+    const x = c / 255;
+    return x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+
+/**
+ * Text ink for an original colour on a light background: pale colours are
+ * pulled toward black in proportion to their lightness, keeping their hue,
+ * so thin glyphs stay readable without strokes or shadows.
+ */
+function deepen(hex: string) {
+  const rgb = hexToRgb(hex);
+  const amount = Math.min(1, Math.max(0, (relativeLuminance(rgb) - 0.35) / 0.65)) * 0.5;
+  const [r, g, b] = rgb.map((c) => Math.round(c * (1 - amount)));
+  return `rgb(${r} ${g} ${b})`;
+}
 
 // Ordered (Bayer 4×4) dithering: each unit splits into 4×4 sub-pixels of 3px.
 const DITHER_CELLS = 4;
@@ -81,6 +113,7 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
   let mode = MODES.indexOf(initialMode);
   let colors = { fg: '#000', subtle: '#999', accent: '#669fd0', line: '#e8e8e8' };
   let font = '500 10px monospace';
+  let lightTheme = true;
 
   const pointer = { x: 0, y: 0, inside: false };
   const lens = { x: 0, y: 0, r: 0 };
@@ -103,7 +136,16 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
       line: style.getPropertyValue('--color-line-strong').trim() || colors.line,
     };
     font = `500 10px ${style.fontFamily || 'monospace'}`;
+    lightTheme = relativeLuminance(hexToRgb(colors.fg)) < 0.5;
+    deepened.clear();
   }
+
+  const deepened = new Map<string, string>();
+  const deepenCached = (hex: string) => {
+    let value = deepened.get(hex);
+    if (!value) deepened.set(hex, (value = deepen(hex)));
+    return value;
+  };
 
   function layout() {
     const rect = canvas.getBoundingClientRect();
@@ -180,13 +222,14 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
    * threshold is below `density`. The matrix is indexed by absolute
    * sub-pixel position, so neighbouring units form one continuous pattern.
    */
-  function ditherUnit(c: number, r: number, density: number) {
+  function ditherUnit(c: number, r: number, density: number, grow = 0) {
     const x = originX + c * UNIT;
     const y = originY + r * UNIT;
+    const size = DITHER_SIZE + grow * 2;
     for (let sy = 0; sy < DITHER_CELLS; sy++) {
       for (let sx = 0; sx < DITHER_CELLS; sx++) {
         if (density > BAYER[sy * DITHER_CELLS + sx]) {
-          ctx!.fillRect(x + sx * DITHER_SIZE, y + sy * DITHER_SIZE, DITHER_SIZE, DITHER_SIZE);
+          ctx!.fillRect(x + sx * DITHER_SIZE - grow, y + sy * DITHER_SIZE - grow, size, size);
         }
       }
     }
@@ -273,10 +316,16 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
     }
   }
 
-  function drawFigure(m: number, i: number, x: number, y: number, now: number) {
+  /**
+   * Draws a figure unit in mode `m`. With `tint` (the pixel's original
+   * colour, used inside the lens) the same marks are drawn in that colour
+   * at full strength, and the accent effect is left out.
+   */
+  function drawFigure(m: number, i: number, x: number, y: number, now: number, tint?: string) {
     const t = tone[i];
     const isAccent = accent[i] === 1;
-    const h = heat[i];
+    const h = tint ? 0 : heat[i];
+    const ink = tint ?? (isAccent ? colors.accent : colors.fg);
     const cx = x + HALF;
     const cy = y + HALF;
 
@@ -289,22 +338,29 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
         ctx!.fillStyle = colors.accent;
         ctx!.globalAlpha = 1;
       } else {
-        const g = 1 + Math.round(t * 8);
+        // Inside the lens, denser glyphs let the colour read.
+        const g = tint ? 6 + Math.round(t * 3) : 1 + Math.round(t * 8);
         const jitter = (seed[i] % 3) - 1;
         left = RAMP[g];
         right = RAMP[Math.min(9, Math.max(1, g + jitter))];
-        ctx!.fillStyle = isAccent ? colors.accent : colors.fg;
-        ctx!.globalAlpha = 0.55 + 0.45 * t;
+        ctx!.fillStyle = ink;
+        ctx!.globalAlpha = tint ? 1 : 0.55 + 0.45 * t;
       }
+      if (tint && lightTheme) ctx!.fillStyle = deepenCached(tint);
       ctx!.fillText(left, x + 3, cy);
       ctx!.fillText(right, x + 9, cy);
       return;
     }
 
     if (m === 1) {
-      ctx!.fillStyle = isAccent ? colors.accent : colors.fg;
-      ctx!.globalAlpha = isAccent ? t : 0.12 + 0.88 * t;
+      ctx!.fillStyle = ink;
+      ctx!.globalAlpha = tint ? 1 : isAccent ? t : 0.12 + 0.88 * t;
       ctx!.fillRect(x + 1, y + 1, UNIT - 2, UNIT - 2);
+      if (tint) {
+        ctx!.strokeStyle = TINT_OUTLINE;
+        ctx!.lineWidth = 1;
+        ctx!.strokeRect(x + 1.5, y + 1.5, UNIT - 3, UNIT - 3);
+      }
       if (h > 0.02) {
         ctx!.fillStyle = colors.accent;
         ctx!.globalAlpha = h * 0.85;
@@ -318,8 +374,13 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
       const c = i % cols;
       const r = (i / cols) | 0;
       ctx!.globalAlpha = 1;
-      ctx!.fillStyle = isAccent ? colors.accent : colors.fg;
-      ditherUnit(c, r, isAccent ? 0.35 + 0.65 * t : t);
+      const density = isAccent ? 0.35 + 0.65 * t : t;
+      if (tint) {
+        ctx!.fillStyle = TINT_OUTLINE;
+        ditherUnit(c, r, density, 0.5);
+      }
+      ctx!.fillStyle = ink;
+      ditherUnit(c, r, density);
       if (h > 0.02) {
         ctx!.fillStyle = colors.accent;
         ditherUnit(c, r, h);
@@ -328,37 +389,21 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
     }
 
     const radius = Math.min(HALF - 0.5, 1.4 + t * 4.2 + h * 1.5);
-    ctx!.fillStyle = isAccent || h > 0.3 ? colors.accent : colors.fg;
-    ctx!.globalAlpha = isAccent ? t : 0.3 + 0.7 * t;
+    ctx!.fillStyle = tint ?? (isAccent || h > 0.3 ? colors.accent : colors.fg);
+    ctx!.globalAlpha = tint ? 1 : isAccent ? t : 0.3 + 0.7 * t;
     ctx!.beginPath();
     ctx!.arc(cx, cy, radius, 0, Math.PI * 2);
     ctx!.fill();
+    if (tint) {
+      ctx!.strokeStyle = TINT_OUTLINE;
+      ctx!.lineWidth = 1;
+      ctx!.stroke();
+    }
   }
 
   /** Unit-level ordered dither: the lens rim dissolves pixel by pixel. */
   function revealed(i: number, c: number, r: number) {
     return reveal[i] > 0 && reveal[i] > BAYER[(r & 3) * DITHER_CELLS + (c & 3)];
-  }
-
-  /**
-   * The original full-colour pixel. Edges that face empty space get a faint
-   * outline so pale pixels hold their silhouette on a light background.
-   */
-  function drawOriginal(c: number, r: number, x: number, y: number) {
-    const c2d = ctx!;
-    const i = r * cols + c;
-    c2d.globalAlpha = 1;
-    c2d.fillStyle = palette[colorIndex[i]];
-    c2d.fillRect(x, y, UNIT, UNIT);
-
-    const empty = (cc: number, rr: number) =>
-      cc < 0 || cc >= cols || rr < 0 || rr >= rows || tone[rr * cols + cc] < 0;
-    c2d.globalAlpha = 0.22;
-    c2d.fillStyle = colors.fg;
-    if (empty(c, r - 1)) c2d.fillRect(x, y, UNIT, 1);
-    if (empty(c, r + 1)) c2d.fillRect(x, y + UNIT - 1, UNIT, 1);
-    if (empty(c - 1, r)) c2d.fillRect(x, y, 1, UNIT);
-    if (empty(c + 1, r)) c2d.fillRect(x + UNIT - 1, y, 1, UNIT);
   }
 
   function draw(now: number) {
@@ -381,7 +426,7 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
         // Figure units in Pixel mode sit on the same grid as the background.
         if (shownMode(i, now) === 1) drawGridCell(i);
         if (revealed(i, c, r)) {
-          drawOriginal(c, r, x, y);
+          drawFigure(mode, i, x, y, now, palette[colorIndex[i]]);
           continue;
         }
         if (now < at - SCRAMBLE_MS) {
