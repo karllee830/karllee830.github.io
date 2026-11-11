@@ -83,6 +83,7 @@ const ogImage = new URL(avatarUrl, Astro.site);
     <Font cssVariable="--font-code" />
   </head>
   <body>
+    <canvas class="page-backdrop" aria-hidden="true"></canvas>
     <a class="skip-link" href="#main">{t('skip')}</a>
     <div class="shell">
       <div class="layout">
@@ -100,8 +101,10 @@ const ogImage = new URL(avatarUrl, Astro.site);
     <script>
       import { initSquircles } from '../lib/squircle';
       import { initLayoutScroll } from '../lib/layout-scroll';
+      import { initPageBackdrop } from '../lib/page-backdrop';
       initSquircles();
       initLayoutScroll();
+      initPageBackdrop();
     </script>
   </body>
 </html>
@@ -142,7 +145,28 @@ const ogImage = new URL(avatarUrl, Astro.site);
     transform: none;
   }
 
+  /* Fixed full-screen texture behind the page (src/lib/page-backdrop.ts). */
+  .page-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    font-family: var(--font-mono);
+    pointer-events: none;
+  }
+
+  body {
+    background: none;
+  }
+
+  /*
+   * The texture only shows in the margins outside the frame: the whole
+   * frame (sidebar and content) stays solid.
+   */
   .shell {
+    position: relative;
+    z-index: 1;
     min-height: 100dvh;
     overflow-x: clip;
     background-color: var(--color-bg);
@@ -156,24 +180,11 @@ const ogImage = new URL(avatarUrl, Astro.site);
   }
 
   /*
-   * Desktop: hatched gutters and a hairline frame. The sidebar is a static
-   * column running to the bottom of the page; body and footer share the
-   * right column, split from the sidebar by a hairline.
+   * Desktop: a hairline frame over the page texture. The sidebar column runs
+   * to the bottom of the page; body and footer share the right column,
+   * split from the sidebar by a hairline.
    */
   @media (min-width: 1024px) {
-    html {
-      background-image: repeating-linear-gradient(
-        -45deg,
-        var(--color-hatch) 0 1px,
-        transparent 1px 8px
-      );
-      background-attachment: fixed;
-    }
-
-    body {
-      background: none;
-    }
-
     .shell {
       max-width: calc(
         var(--sidebar-inset) + var(--sidebar-width) + var(--layout-gap) + var(--content-width) +

@@ -56,6 +56,10 @@
   opacity: 1;
 }
 
+.ascii-modes:not([data-settled]) .ascii-thumb {
+  transition: none;
+}
+
 /* Bar controls are 32px tall: radius 16 = hero radius − padding. */
 .ascii-chip,
 .ascii-replay {

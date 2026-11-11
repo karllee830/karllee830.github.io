@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
-import { createAsciiEngine, type AsciiEngine, type RenderMode } from '../../lib/ascii-engine';
+import { createAsciiEngine, type AsciiEngine } from '../../lib/ascii-engine';
+import { MODE_EVENT, MODE_STORAGE_KEY, readStoredMode, type ModeWave, type RenderMode } from '../../lib/mode-wave';
 import './ascii-avatar.css';
 
 // Order of the mode buttons (independent of the engine's internal mode codes).
@@ -19,13 +20,45 @@ export default function AsciiAvatar({ label, modesLabel, replayLabel, modeLabels
   const [mode, setMode] = useState<RenderMode>('ascii');
   const modesRef = useRef<HTMLDivElement>(null);
   const [thumb, setThumb] = useState<CSSProperties | null>(null);
+  const [settled, setSettled] = useState(false);
 
   useEffect(() => {
     if (!canvasRef.current) return;
-    const engine = createAsciiEngine(canvasRef.current, 'ascii');
+    // Start in the last chosen mode; the page backdrop already shows it.
+    const stored = readStoredMode();
+    const engine = createAsciiEngine(canvasRef.current, stored);
     engineRef.current = engine;
-    return () => engine.destroy();
+    setMode(stored);
+    // Let the thumb jump to the stored mode before its slide transition turns on.
+    const timer = window.setTimeout(() => setSettled(true), 60);
+    return () => {
+      window.clearTimeout(timer);
+      engine.destroy();
+    };
   }, []);
+
+  /**
+   * User picks a mode: remember it, then start one wave from the avatar that
+   * both this canvas and the page backdrop follow.
+   */
+  const choose = (next: RenderMode) => {
+    if (next === mode) return;
+    try {
+      localStorage.setItem(MODE_STORAGE_KEY, next);
+    } catch {
+      /* storage unavailable */
+    }
+    const rect = canvasRef.current?.getBoundingClientRect();
+    const wave: ModeWave = {
+      mode: next,
+      x: rect ? rect.left + rect.width / 2 : window.innerWidth / 2,
+      y: rect ? rect.top + rect.height / 2 : window.innerHeight / 2,
+      t0: performance.now(),
+    };
+    engineRef.current?.setMode(next, wave);
+    window.dispatchEvent(new CustomEvent(MODE_EVENT, { detail: wave }));
+    setMode(next);
+  };
 
   useEffect(() => {
     engineRef.current?.setMode(mode);
@@ -52,7 +85,7 @@ export default function AsciiAvatar({ label, modesLabel, replayLabel, modeLabels
     if (!step) return;
     event.preventDefault();
     const next = (MODES.indexOf(mode) + step + MODES.length) % MODES.length;
-    setMode(MODES[next]);
+    choose(MODES[next]);
     chipRefs.current[next]?.focus();
   };
 
@@ -69,6 +102,7 @@ export default function AsciiAvatar({ label, modesLabel, replayLabel, modeLabels
           aria-label={modesLabel}
           onKeyDown={onKeyDown}
           data-ready={thumb ? '' : undefined}
+          data-settled={settled ? '' : undefined}
         >
           <span className="ascii-thumb sq" style={thumb ?? undefined} aria-hidden="true" />
           {MODES.map((m, index) => (
@@ -82,7 +116,7 @@ export default function AsciiAvatar({ label, modesLabel, replayLabel, modeLabels
               aria-checked={mode === m}
               tabIndex={mode === m ? 0 : -1}
               className="ascii-chip sq sq-line"
-              onClick={() => setMode(m)}
+              onClick={() => choose(m)}
             >
               {modeLabels[m]}
             </button>

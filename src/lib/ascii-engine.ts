@@ -1,4 +1,5 @@
 import { avatar } from '../data/avatar';
+import { arrivalTime, WAVE_WIDTH, WAVE_SPEED, type ModeWave, type RenderMode } from './mode-wave';
 import { buildAvatarModel } from './avatar-model';
 
 /**
@@ -16,11 +17,14 @@ import { buildAvatarModel } from './avatar-model';
  * (over empty background it fills the lens too), leaving a short trail.
  * Taps send out a ripple.
  *
- * The loop only runs while something is moving, so an idle hero costs
- * nothing.
+ * Performance: the still picture of the current mode is cached in an
+ * offscreen "base" canvas; a frame copies it and redraws only the units the
+ * pointer, lens or ripples are touching (full redraws happen only during
+ * mode transitions). Glyphs are rasterised once per character and colour
+ * and then blitted. The loop only runs while something is moving.
  */
 
-export type RenderMode = 'ascii' | 'pixel' | 'dots' | 'dither';
+export type { RenderMode };
 
 const MODES: RenderMode[] = ['ascii', 'pixel', 'dots', 'dither'];
 const NONE = -1;
@@ -78,7 +82,8 @@ const DITHER_SIZE = UNIT / DITHER_CELLS;
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v + 0.5) / 16);
 
 export interface AsciiEngine {
-  setMode(mode: RenderMode): void;
+  /** With a wave, the switch follows it (shared with the page backdrop). */
+  setMode(mode: RenderMode, wave?: ModeWave): void;
   replay(): void;
   destroy(): void;
 }
@@ -88,6 +93,15 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
   if (!ctx) return { setMode() {}, replay() {}, destroy() {} };
 
   const model = buildAvatarModel(avatar);
+
+  // Drawing helpers paint into `g`: the visible canvas or the cached base.
+  let g: CanvasRenderingContext2D = ctx;
+  const base = document.createElement('canvas');
+  const baseCtx = base.getContext('2d')!;
+  let baseDirty = true;
+  let dpr = 1;
+  const glyphs = new Map<string, HTMLCanvasElement>();
+  const stamps = new Map<string, HTMLCanvasElement>();
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
   let width = 0;
@@ -108,10 +122,12 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
   let colorIndex = new Int16Array(0);
   const palette: string[] = [];
   let switchAt = new Float64Array(0);
+  // When a unit enters its transition (accent wavefront or glyph scramble).
+  let tintAt = new Float64Array(0);
   let from = new Int8Array(0);
 
   let mode = MODES.indexOf(initialMode);
-  let colors = { fg: '#000', subtle: '#999', accent: '#669fd0', line: '#e8e8e8' };
+  let colors = { fg: '#000', subtle: '#999', accent: '#669fd0' };
   let font = '500 10px monospace';
   let lightTheme = true;
 
@@ -121,6 +137,7 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
   let transitionEnd = 0;
 
   let raf = 0;
+  let idleTimer = 0;
   let lastFrame = 0;
   let glitchTimer = 0;
   let visible = true;
@@ -133,11 +150,37 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
       fg: style.getPropertyValue('--color-fg').trim() || colors.fg,
       subtle: style.getPropertyValue('--color-fg-subtle').trim() || colors.subtle,
       accent: style.getPropertyValue('--color-accent').trim() || colors.accent,
-      line: style.getPropertyValue('--color-line-strong').trim() || colors.line,
     };
     font = `500 10px ${style.fontFamily || 'monospace'}`;
     lightTheme = relativeLuminance(hexToRgb(colors.fg)) < 0.5;
     deepened.clear();
+    glyphs.clear();
+    stamps.clear();
+    baseDirty = true;
+  }
+
+  /** A glyph rasterised once per character and colour, blitted afterwards. */
+  function glyphAt(ch: string, left: number, top: number, color: string) {
+    g.drawImage(glyph(ch, color), left, top, HALF, UNIT);
+  }
+
+  function glyph(ch: string, color: string) {
+    const key = `${ch}|${color}`;
+    let image = glyphs.get(key);
+    if (!image) {
+      image = document.createElement('canvas');
+      image.width = Math.ceil(HALF * dpr);
+      image.height = Math.ceil(UNIT * dpr);
+      const c = image.getContext('2d')!;
+      c.scale(dpr, dpr);
+      c.font = font;
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.fillStyle = color;
+      c.fillText(ch, HALF / 2, HALF);
+      glyphs.set(key, image);
+    }
+    return image;
   }
 
   const deepened = new Map<string, string>();
@@ -153,10 +196,17 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
     height = Math.round(rect.height);
     if (!width || !height) return false;
 
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
-    canvas.width = Math.round(width * dpr);
-    canvas.height = Math.round(height * dpr);
+    const nextDpr = Math.min(2, window.devicePixelRatio || 1);
+    if (nextDpr !== dpr) {
+      glyphs.clear();
+      stamps.clear();
+    }
+    dpr = nextDpr;
+    canvas.width = base.width = Math.round(width * dpr);
+    canvas.height = base.height = Math.round(height * dpr);
     ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
+    baseCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    baseDirty = true;
 
     cols = Math.floor(width / UNIT);
     rows = Math.floor(height / UNIT);
@@ -173,6 +223,7 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
     reveal = new Float32Array(size);
     colorIndex = new Int16Array(size).fill(-1);
     switchAt = new Float64Array(size);
+    tintAt = new Float64Array(size);
     from = new Int8Array(size).fill(mode);
     for (let i = 0; i < size; i++) seed[i] = (Math.random() * 65535) | 0;
 
@@ -223,33 +274,49 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
    * sub-pixel position, so neighbouring units form one continuous pattern.
    */
   function ditherUnit(c: number, r: number, density: number, grow = 0) {
-    const x = originX + c * UNIT;
-    const y = originY + r * UNIT;
-    const size = DITHER_SIZE + grow * 2;
-    for (let sy = 0; sy < DITHER_CELLS; sy++) {
-      for (let sx = 0; sx < DITHER_CELLS; sx++) {
-        if (density > BAYER[sy * DITHER_CELLS + sx]) {
-          ctx!.fillRect(x + sx * DITHER_SIZE - grow, y + sy * DITHER_SIZE - grow, size, size);
+    // The 4×4 matrix repeats every unit, so each density level is one stamp.
+    const level = Math.min(16, Math.max(0, Math.ceil(density * 16 - 0.5)));
+    if (!level) return;
+    const color = g.fillStyle as string;
+    const key = `${level}|${color}|${grow}`;
+    let stamp = stamps.get(key);
+    if (!stamp) {
+      stamp = document.createElement('canvas');
+      const pad = Math.ceil(grow * dpr);
+      stamp.width = stamp.height = Math.round(UNIT * dpr) + pad * 2;
+      const s2 = stamp.getContext('2d')!;
+      s2.fillStyle = color;
+      const cell = DITHER_SIZE * dpr;
+      const size = cell + grow * 2 * dpr;
+      for (let sy = 0; sy < DITHER_CELLS; sy++) {
+        for (let sx = 0; sx < DITHER_CELLS; sx++) {
+          if (level > BAYER[sy * DITHER_CELLS + sx] * 16 - 0.5) {
+            s2.fillRect(pad + sx * cell - grow * dpr, pad + sy * cell - grow * dpr, size, size);
+          }
         }
       }
+      stamps.set(key, stamp);
     }
+    const pad = Math.ceil(grow * dpr) / dpr;
+    g.drawImage(stamp, originX + c * UNIT - pad, originY + r * UNIT - pad, UNIT + pad * 2, UNIT + pad * 2);
   }
 
   /**
    * Quiet background for a unit outside the figure, matched to the mode:
-   * ASCII gets faint dots of text, Pixel a grid (drawn once per frame in
-   * drawGrid), Dots a halftone field, Dither a dithered fade toward the floor.
+   * ASCII gets faint dots of text, Pixel faint empty pixel slots, Dots a
+   * halftone field, Dither a dithered fade toward the floor.
    */
   function drawBackdrop(m: number, i: number, cx: number, cy: number, tint = false) {
-    if (halo[i] && m !== 1) return;
-    const c2d = ctx!;
+    if (halo[i]) return;
+    const c2d = g;
     c2d.fillStyle = tint ? colors.accent : colors.subtle;
     if (m === 1) {
-      drawGridCell(i, tint);
+      c2d.globalAlpha = tint ? 0.5 : 0.1;
+      c2d.fillRect(cx - HALF + 1, cy - HALF + 1, UNIT - 2, UNIT - 2);
     } else if (m === 0) {
       c2d.globalAlpha = 0.5;
-      c2d.fillText('.', cx - 3, cy);
-      c2d.fillText('.', cx + 3, cy);
+      glyphAt('.', cx - HALF, cy - HALF, c2d.fillStyle as string);
+      glyphAt('.', cx, cy - HALF, c2d.fillStyle as string);
     } else if (m === 2) {
       c2d.globalAlpha = 0.9;
       c2d.beginPath();
@@ -263,30 +330,10 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
     }
   }
 
-  /**
-   * Pixel mode: hairline grid on unit boundaries, like a sprite editor.
-   * Drawn per unit (top and left edges, plus the outer edges) so it can
-   * change unit by unit during a mode transition.
-   */
-  function drawGridCell(i: number, tint = false) {
-    const c2d = ctx!;
-    const c = i % cols;
-    const r = (i / cols) | 0;
-    const x = originX + c * UNIT;
-    const y = originY + r * UNIT;
-    c2d.globalAlpha = tint ? 0.9 : 0.6;
-    c2d.fillStyle = tint ? colors.accent : colors.line;
-    c2d.fillRect(x - 0.5, y, 1, UNIT);
-    c2d.fillRect(x, y - 0.5, UNIT, 1);
-    if (c === cols - 1) c2d.fillRect(x + UNIT - 0.5, y, 1, UNIT);
-    if (r === rows - 1) c2d.fillRect(x, y + UNIT - 0.5, UNIT, 1);
-  }
-
   /** Mode a unit currently shows; -2 while it is inside the transition wavefront. */
   function shownMode(i: number, now: number) {
-    const at = switchAt[i];
-    if (now >= at) return mode;
-    if (now >= at - SCRAMBLE_MS) return -2;
+    if (now >= switchAt[i]) return mode;
+    if (now >= tintAt[i]) return -2;
     return from[i];
   }
 
@@ -299,20 +346,20 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
       else if (m !== NONE) drawBackdrop(m, i, cx, cy);
       return;
     }
-    ctx!.fillStyle = colors.accent;
-    ctx!.globalAlpha = Math.min(1, h * 1.1);
+    g.fillStyle = colors.accent;
+    g.globalAlpha = Math.min(1, h * 1.1);
     if (mode === 0) {
-      ctx!.fillText(noiseGlyph(i, now), cx, cy);
+      glyphAt(noiseGlyph(i, now), cx - HALF / 2, cy - HALF, colors.accent);
     } else if (mode === 1) {
       const s = 2 + h * (UNIT - 4);
-      ctx!.fillRect(cx - s / 2, cy - s / 2, s, s);
+      g.fillRect(cx - s / 2, cy - s / 2, s, s);
     } else if (mode === 3) {
-      ctx!.globalAlpha = 1;
+      g.globalAlpha = 1;
       ditherUnit(i % cols, (i / cols) | 0, h * 0.9);
     } else {
-      ctx!.beginPath();
-      ctx!.arc(cx, cy, 0.8 + h * 4, 0, Math.PI * 2);
-      ctx!.fill();
+      g.beginPath();
+      g.arc(cx, cy, 0.8 + h * 4, 0, Math.PI * 2);
+      g.fill();
     }
   }
 
@@ -321,10 +368,10 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
    * colour, used inside the lens) the same marks are drawn in that colour
    * at full strength, and the accent effect is left out.
    */
-  function drawFigure(m: number, i: number, x: number, y: number, now: number, tint?: string) {
+  function drawFigure(m: number, i: number, x: number, y: number, now: number, tint?: string, still = false) {
     const t = tone[i];
     const isAccent = accent[i] === 1;
-    const h = tint ? 0 : heat[i];
+    const h = tint || still ? 0 : heat[i];
     const ink = tint ?? (isAccent ? colors.accent : colors.fg);
     const cx = x + HALF;
     const cy = y + HALF;
@@ -335,36 +382,37 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
       if (h > 0.3) {
         left = noiseGlyph(i, now);
         right = noiseGlyph(i + 7, now);
-        ctx!.fillStyle = colors.accent;
-        ctx!.globalAlpha = 1;
+        g.fillStyle = colors.accent;
+        g.globalAlpha = 1;
       } else {
         // Inside the lens, denser glyphs let the colour read.
-        const g = tint ? 6 + Math.round(t * 3) : 1 + Math.round(t * 8);
+        const level = tint ? 6 + Math.round(t * 3) : 1 + Math.round(t * 8);
         const jitter = (seed[i] % 3) - 1;
-        left = RAMP[g];
-        right = RAMP[Math.min(9, Math.max(1, g + jitter))];
-        ctx!.fillStyle = ink;
-        ctx!.globalAlpha = tint ? 1 : 0.55 + 0.45 * t;
+        left = RAMP[level];
+        right = RAMP[Math.min(9, Math.max(1, level + jitter))];
+        g.fillStyle = ink;
+        g.globalAlpha = tint ? 1 : 0.55 + 0.45 * t;
       }
-      if (tint && lightTheme) ctx!.fillStyle = deepenCached(tint);
-      ctx!.fillText(left, x + 3, cy);
-      ctx!.fillText(right, x + 9, cy);
+      if (tint && lightTheme) g.fillStyle = deepenCached(tint);
+      const color = g.fillStyle as string;
+      glyphAt(left, x, cy - HALF, color);
+      glyphAt(right, x + HALF, cy - HALF, color);
       return;
     }
 
     if (m === 1) {
-      ctx!.fillStyle = ink;
-      ctx!.globalAlpha = tint ? 1 : isAccent ? t : 0.12 + 0.88 * t;
-      ctx!.fillRect(x + 1, y + 1, UNIT - 2, UNIT - 2);
+      g.fillStyle = ink;
+      g.globalAlpha = tint ? 1 : isAccent ? t : 0.12 + 0.88 * t;
+      g.fillRect(x + 1, y + 1, UNIT - 2, UNIT - 2);
       if (tint) {
-        ctx!.strokeStyle = TINT_OUTLINE;
-        ctx!.lineWidth = 1;
-        ctx!.strokeRect(x + 1.5, y + 1.5, UNIT - 3, UNIT - 3);
+        g.strokeStyle = TINT_OUTLINE;
+        g.lineWidth = 1;
+        g.strokeRect(x + 1.5, y + 1.5, UNIT - 3, UNIT - 3);
       }
       if (h > 0.02) {
-        ctx!.fillStyle = colors.accent;
-        ctx!.globalAlpha = h * 0.85;
-        ctx!.fillRect(x + 1, y + 1, UNIT - 2, UNIT - 2);
+        g.fillStyle = colors.accent;
+        g.globalAlpha = h * 0.85;
+        g.fillRect(x + 1, y + 1, UNIT - 2, UNIT - 2);
       }
       return;
     }
@@ -373,31 +421,31 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
       // 1-bit look: full-strength colour, tone carried by sub-pixel density.
       const c = i % cols;
       const r = (i / cols) | 0;
-      ctx!.globalAlpha = 1;
+      g.globalAlpha = 1;
       const density = isAccent ? 0.35 + 0.65 * t : t;
       if (tint) {
-        ctx!.fillStyle = TINT_OUTLINE;
+        g.fillStyle = TINT_OUTLINE;
         ditherUnit(c, r, density, 0.5);
       }
-      ctx!.fillStyle = ink;
+      g.fillStyle = ink;
       ditherUnit(c, r, density);
       if (h > 0.02) {
-        ctx!.fillStyle = colors.accent;
+        g.fillStyle = colors.accent;
         ditherUnit(c, r, h);
       }
       return;
     }
 
     const radius = Math.min(HALF - 0.5, 1.4 + t * 4.2 + h * 1.5);
-    ctx!.fillStyle = tint ?? (isAccent || h > 0.3 ? colors.accent : colors.fg);
-    ctx!.globalAlpha = tint ? 1 : isAccent ? t : 0.3 + 0.7 * t;
-    ctx!.beginPath();
-    ctx!.arc(cx, cy, radius, 0, Math.PI * 2);
-    ctx!.fill();
+    g.fillStyle = tint ?? (isAccent || h > 0.3 ? colors.accent : colors.fg);
+    g.globalAlpha = tint ? 1 : isAccent ? t : 0.3 + 0.7 * t;
+    g.beginPath();
+    g.arc(cx, cy, radius, 0, Math.PI * 2);
+    g.fill();
     if (tint) {
-      ctx!.strokeStyle = TINT_OUTLINE;
-      ctx!.lineWidth = 1;
-      ctx!.stroke();
+      g.strokeStyle = TINT_OUTLINE;
+      g.lineWidth = 1;
+      g.stroke();
     }
   }
 
@@ -406,39 +454,83 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
     return reveal[i] > 0 && reveal[i] > BAYER[(r & 3) * DITHER_CELLS + (c & 3)];
   }
 
-  function draw(now: number) {
-    const c2d = ctx!;
-    c2d.clearRect(0, 0, width, height);
-    c2d.font = font;
-    c2d.textAlign = 'center';
-    c2d.textBaseline = 'middle';
-
+  /** Paints every unit into `g`; `still` leaves out pointer and ripple effects. */
+  function drawAll(now: number, still: boolean) {
     for (let r = 0; r < rows; r++) {
       const y = originY + r * UNIT;
       for (let c = 0; c < cols; c++) {
         const i = r * cols + c;
         const x = originX + c * UNIT;
         if (tone[i] < 0) {
-          drawField(i, x + HALF, y + HALF, now);
+          if (still) drawBackdrop(mode, i, x + HALF, y + HALF);
+          else drawField(i, x + HALF, y + HALF, now);
           continue;
         }
-        const at = switchAt[i];
-        // Figure units in Pixel mode sit on the same grid as the background.
-        if (shownMode(i, now) === 1) drawGridCell(i);
+        if (still) {
+          drawFigure(mode, i, x, y, now, undefined, true);
+          continue;
+        }
         if (revealed(i, c, r)) {
           drawFigure(mode, i, x, y, now, palette[colorIndex[i]]);
           continue;
         }
-        if (now < at - SCRAMBLE_MS) {
+        if (now < tintAt[i]) {
           if (from[i] !== NONE) drawFigure(from[i], i, x, y, now);
-        } else if (now < at) {
-          c2d.fillStyle = colors.accent;
-          c2d.globalAlpha = 1;
-          c2d.fillText(noiseGlyph(i, now), x + 3, y + HALF);
-          c2d.fillText(noiseGlyph(i + 3, now), x + 9, y + HALF);
+        } else if (now < switchAt[i]) {
+          g.globalAlpha = 1;
+          glyphAt(noiseGlyph(i, now), x, y, colors.accent);
+          glyphAt(noiseGlyph(i + 3, now), x + HALF, y, colors.accent);
         } else {
           drawFigure(mode, i, x, y, now);
         }
+      }
+    }
+    g.globalAlpha = 1;
+  }
+
+  /** Caches the still picture of the current mode. */
+  function buildBase(now: number) {
+    g = baseCtx;
+    baseCtx.clearRect(0, 0, width, height);
+    drawAll(now, true);
+    g = ctx!;
+    baseDirty = false;
+    // Warm the glyphs the pointer effects use, so the first hover does not stutter.
+    for (const ch of NOISE) glyph(ch, colors.accent);
+  }
+
+  function draw(now: number) {
+    const c2d = ctx!;
+    g = c2d;
+
+    // Mode changes and glitches touch many units: draw everything.
+    if (now < transitionEnd) {
+      c2d.clearRect(0, 0, width, height);
+      drawAll(now, false);
+      baseDirty = true;
+      return;
+    }
+
+    if (baseDirty) buildBase(now);
+    c2d.save();
+    c2d.setTransform(1, 0, 0, 1, 0, 0);
+    c2d.clearRect(0, 0, canvas.width, canvas.height);
+    c2d.drawImage(base, 0, 0);
+    c2d.restore();
+
+    // Redraw only the units the pointer, lens or ripples are affecting.
+    for (let r = 0; r < rows; r++) {
+      const y = originY + r * UNIT;
+      for (let c = 0; c < cols; c++) {
+        const i = r * cols + c;
+        const h = heat[i];
+        const isField = tone[i] < 0;
+        if (isField ? h < 0.04 : h <= 0.02 && reveal[i] === 0) continue;
+        const x = originX + c * UNIT;
+        c2d.clearRect(x, y, UNIT, UNIT);
+        if (isField) drawField(i, x + HALF, y + HALF, now);
+        else if (revealed(i, c, r)) drawFigure(mode, i, x, y, now, palette[colorIndex[i]]);
+        else drawFigure(mode, i, x, y, now);
       }
     }
     c2d.globalAlpha = 1;
@@ -473,13 +565,16 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
     lastFrame = now;
 
     let active = now < transitionEnd;
+    let heatBefore = 0;
     const decay = Math.pow(0.88, dt / 16.67);
     for (let i = 0; i < heat.length; i++) {
       if (heat[i] === 0) continue;
+      heatBefore += heat[i];
       heat[i] *= decay;
       if (heat[i] < 0.01) heat[i] = 0;
       else active = true;
     }
+    const lensBefore = lens.x + lens.y + lens.r;
 
     // The lens eases after the pointer, opens on enter and closes on leave.
     const follow = 1 - Math.pow(LENS_FOLLOW, dt / 16.67);
@@ -522,48 +617,77 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
     }
 
     draw(now);
-    if (active) kick();
+    if (!active) return;
+
+    // A resting pointer reaches a steady state: stop repainting every frame.
+    let heatAfter = 0;
+    for (let i = 0; i < heat.length; i++) heatAfter += heat[i];
+    const settled =
+      now >= transitionEnd &&
+      ripples.length === 0 &&
+      Math.abs(lens.x + lens.y + lens.r - lensBefore) < 0.05 &&
+      Math.abs(heatAfter - heatBefore) < 0.05;
+    if (!settled) kick();
+    // ASCII noise glyphs still flicker, at their own 70ms rate.
+    else if (mode === 0) idleTimer = window.setTimeout(kick, 70);
   }
 
   function kick() {
+    window.clearTimeout(idleTimer);
     if (raf || !visible || destroyed) return;
     raf = requestAnimationFrame(frame);
   }
 
-  function transition(next: number, kind: 'intro' | 'switch') {
+  function transition(next: number, kind: 'intro' | 'switch', wave?: ModeWave) {
     const now = performance.now();
     const instant = reducedMotion.matches;
     let end = now;
-    // Background units change in a ring that spreads out from the figure.
-    const centerC = cols / 2;
-    const centerR = (figureRowMin + figureRowMax) / 2;
-    const reach = Math.hypot(Math.max(centerC, cols - centerC), Math.max(centerR, rows - centerR)) || 1;
+
+    // Distances to the wave origin are measured in viewport pixels, so this
+    // canvas and the page backdrop switch along the same circle.
+    const rect = canvas.getBoundingClientRect();
+    const origin = wave ?? {
+      x: rect.left + width / 2,
+      y: rect.top + originY + ((figureRowMin + figureRowMax) / 2) * UNIT,
+      t0: now,
+    };
+    const distance = (i: number) =>
+      Math.hypot(
+        rect.left + originX + (i % cols) * UNIT + HALF - origin.x,
+        rect.top + originY + ((i / cols) | 0) * UNIT + HALF - origin.y,
+      );
+    const waveOf = { mode: MODES[next], ...origin } as ModeWave;
+    const band = WAVE_WIDTH / WAVE_SPEED;
+
     for (let i = 0; i < tone.length; i++) {
       if (tone[i] < 0) {
+        // Background units: the accent band passes, then the new style.
         if (kind === 'intro') continue;
         from[i] = now >= switchAt[i] ? mode : from[i];
         if (instant) {
-          switchAt[i] = 0;
+          tintAt[i] = switchAt[i] = 0;
           continue;
         }
-        const d = Math.hypot((i % cols) - centerC, ((i / cols) | 0) - centerR) / reach;
-        switchAt[i] = now + SCRAMBLE_MS + d * 520 + Math.random() * 60;
+        tintAt[i] = arrivalTime(waveOf, distance(i));
+        switchAt[i] = tintAt[i] + band;
         end = Math.max(end, switchAt[i]);
         continue;
       }
+
       const shown = now >= switchAt[i] ? mode : from[i];
       from[i] = kind === 'intro' ? NONE : shown;
       if (instant) {
-        switchAt[i] = 0;
+        tintAt[i] = switchAt[i] = 0;
         continue;
       }
-      const r = (i / cols) | 0;
-      const c = i % cols;
-      const delay =
-        kind === 'intro'
-          ? (r - figureRowMin) * 18 + Math.random() * 320
-          : c * 4 + (r - figureRowMin) * 6 + Math.random() * 140;
-      switchAt[i] = now + SCRAMBLE_MS + delay;
+      if (kind === 'intro') {
+        const r = (i / cols) | 0;
+        switchAt[i] = now + SCRAMBLE_MS + (r - figureRowMin) * 18 + Math.random() * 320;
+      } else {
+        // Figure units scramble as the same front reaches them.
+        switchAt[i] = arrivalTime(waveOf, distance(i)) + SCRAMBLE_MS + Math.random() * 60;
+      }
+      tintAt[i] = switchAt[i] - SCRAMBLE_MS;
       end = Math.max(end, switchAt[i]);
     }
     mode = next;
@@ -586,6 +710,7 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
         if (tone[i] < 0) continue;
         from[i] = mode;
         switchAt[i] = now + SCRAMBLE_MS + c * 8 + Math.random() * 60;
+        tintAt[i] = switchAt[i] - SCRAMBLE_MS;
         transitionEnd = Math.max(transitionEnd, switchAt[i]);
       }
     }
@@ -658,10 +783,10 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
   });
 
   return {
-    setMode(next) {
+    setMode(next, wave) {
       const index = MODES.indexOf(next);
       if (index === -1 || index === mode) return;
-      transition(index, 'switch');
+      transition(index, 'switch', wave);
     },
     replay() {
       transition(mode, 'intro');
@@ -670,6 +795,7 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
       destroyed = true;
       if (raf) cancelAnimationFrame(raf);
       window.clearTimeout(glitchTimer);
+      window.clearTimeout(idleTimer);
       resizeObserver.disconnect();
       themeObserver.disconnect();
       visibilityObserver.disconnect();
