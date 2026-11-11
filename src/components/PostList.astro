@@ -1,0 +1,75 @@
+---
+import { formatDate, formatMonthDay, postHref, type Post } from '../lib/posts';
+import type { Lang } from '../i18n/ui';
+
+interface Props {
+  posts: Post[];
+  lang: Lang;
+  /** Show month-day only (when the list is already grouped by year). */
+  short?: boolean;
+}
+
+const { posts, lang, short = false } = Astro.props;
+const tag = { zh: '中文', en: 'EN' } as const;
+---
+
+<ul class="post-list">
+  {
+    posts.map((post) => (
+      <li>
+        <a class="row sq" href={postHref(post)} lang={post.data.lang === lang ? undefined : post.data.lang === 'zh' ? 'zh-CN' : 'en'}>
+          <span class="title">{post.data.title}</span>
+          <span class="meta">
+            {post.data.lang !== lang && <span class="lang-tag">{tag[post.data.lang]}</span>}
+            {post.data.draft && <span class="lang-tag">draft</span>}
+            <time class="mono" datetime={post.data.date.toISOString()}>
+              {short ? formatMonthDay(post.data.date) : formatDate(post.data.date)}
+            </time>
+          </span>
+        </a>
+      </li>
+    ))
+  }
+</ul>
+
+<style>
+  .post-list {
+    /* Rows bleed into the gutter so text stays aligned with the column. */
+    margin-inline: calc(-1 * var(--space-3));
+  }
+
+  .row {
+    --sq-r: var(--radius-3);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: var(--space-2) var(--space-3);
+    transition: background-color var(--duration-fast) var(--ease-out);
+  }
+
+  .row:hover {
+    background-color: var(--color-hover);
+  }
+
+  .title {
+    min-width: 0;
+  }
+
+  .meta {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    flex-shrink: 0;
+    color: var(--color-fg-subtle);
+  }
+
+  .lang-tag {
+    font-size: var(--text-caption);
+    line-height: var(--leading-caption);
+  }
+
+  time {
+    font-size: var(--text-caption);
+  }
+</style>

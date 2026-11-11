@@ -1,0 +1,165 @@
+---
+import MiniAvatar from './MiniAvatar.astro';
+import ThemeSwitch from './ThemeSwitch.astro';
+import LangSwitch from './LangSwitch.astro';
+import { site } from '../config/site';
+import { localePath, useTranslations, type Lang } from '../i18n/ui';
+
+export type Section = 'home' | 'blog' | 'none';
+
+interface Props {
+  lang: Lang;
+  section: Section;
+  langHrefs: Record<Lang, string>;
+}
+
+const { lang, section, langHrefs } = Astro.props;
+const t = useTranslations(lang);
+const home = localePath(lang, '/');
+const items = [
+  { href: home, label: t('nav.home'), current: section === 'home', key: 'home' },
+  { href: localePath(lang, '/blog/'), label: t('nav.blog'), current: section === 'blog', key: 'blog' },
+  { href: `${home}#links`, label: t('nav.links'), current: false, key: 'links' },
+];
+---
+
+<header class="site-nav">
+  <a class="brand" href={home} aria-label={site.name}>
+    <span class="brand-mark sq"><MiniAvatar size={20} /></span>
+    <span class="brand-name">{site.name}</span>
+  </a>
+
+  <nav class="nav-links" aria-label={t('nav.label')}>
+    <ul>
+      {
+        items.map((item) => (
+          <li class={`nav-item nav-item--${item.key}`}>
+            <a href={item.href} aria-current={item.current ? 'page' : undefined}>
+              {item.label}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </nav>
+
+  <div class="nav-tools">
+    <LangSwitch lang={lang} hrefs={langHrefs} />
+    <ThemeSwitch lang={lang} />
+  </div>
+</header>
+
+<style>
+  .site-nav {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    height: var(--topbar-height);
+    padding-inline: var(--page-gutter);
+    background-color: color-mix(in srgb, var(--color-bg) 88%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+    font-weight: var(--weight-semibold);
+  }
+
+  .brand-mark {
+    --sq-r: var(--radius-2);
+    display: grid;
+    place-items: center;
+    width: var(--control-sm);
+    height: var(--control-sm);
+    color: var(--color-fg);
+    background-color: var(--color-surface-2);
+    overflow: hidden;
+  }
+
+  .brand-mark :global(svg) {
+    width: 20px;
+    height: 20px;
+    margin-top: 4px;
+  }
+
+  .nav-links {
+    margin-left: auto;
+  }
+
+  .nav-links ul {
+    display: flex;
+    gap: var(--space-4);
+  }
+
+  .nav-links a {
+    color: var(--color-fg-muted);
+    transition: color var(--duration-fast) var(--ease-out);
+  }
+
+  .nav-links a:hover,
+  .nav-links a[aria-current] {
+    color: var(--color-fg);
+  }
+
+  .nav-item--home,
+  .nav-item--links {
+    display: none;
+  }
+
+  .nav-tools {
+    display: flex;
+    gap: var(--space-2);
+  }
+
+  @media (max-width: 359px) {
+    .brand-name {
+      display: none;
+    }
+  }
+
+  /* Desktop: sticky sidebar */
+  @media (min-width: 1024px) {
+    .site-nav {
+      position: sticky;
+      top: 0;
+      flex-direction: column;
+      align-items: stretch;
+      gap: var(--space-8);
+      height: 100dvh;
+      max-height: 100dvh;
+      padding: var(--space-12) 0;
+      background: none;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      border-bottom: 0;
+    }
+
+    .nav-links {
+      margin-left: 0;
+    }
+
+    .nav-links ul {
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .nav-item--home,
+    .nav-item--links {
+      display: list-item;
+    }
+
+    .nav-tools {
+      flex-direction: column;
+      align-items: flex-start;
+      margin-top: auto;
+    }
+  }
+</style>

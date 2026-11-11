@@ -1,0 +1,104 @@
+---
+import Icon from './Icon.astro';
+import { site, localize } from '../config/site';
+import { localePath, type Lang } from '../i18n/ui';
+import { withBase } from '../lib/url';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const links = site.links.map((link) => ({
+  ...link,
+  label: localize(link.label, lang),
+  detail: localize(link.detail, lang),
+  href: link.internal ? (link.localized ? localePath(lang, link.href) : withBase(link.href)) : link.href,
+  external: !link.internal && /^https?:/.test(link.href),
+}));
+---
+
+<ul class="link-grid">
+  {
+    links.map((link) => (
+      <li>
+        <a class="card sq sq-line" href={link.href} rel={link.external ? 'me noopener' : undefined}>
+          <span class="icon-box sq">
+            <Icon name={link.icon} size={16} />
+          </span>
+          <span class="text">
+            <span class="label">{link.label}</span>
+            <span class="detail">{link.detail}</span>
+          </span>
+          <Icon name="arrow-up-right" size={14} class="arrow" />
+        </a>
+      </li>
+    ))
+  }
+</ul>
+
+<style>
+  .link-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+    gap: var(--space-2);
+  }
+
+  /* Card radius 16 with 8px padding → icon box radius 8. */
+  .card {
+    --card-radius: var(--radius-4);
+    --card-padding: var(--space-2);
+    --sq-r: var(--card-radius);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--card-padding);
+    padding-right: var(--space-4);
+  }
+
+  .card:hover {
+    --sq-bg: var(--color-hover);
+    --sq-border: var(--color-line-strong);
+  }
+
+  .icon-box {
+    --sq-r: calc(var(--card-radius) - var(--card-padding));
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: var(--control-lg);
+    height: var(--control-lg);
+    background-color: var(--color-surface-2);
+    color: var(--color-fg);
+  }
+
+  .text {
+    display: grid;
+    min-width: 0;
+  }
+
+  .label {
+    font-weight: var(--weight-medium);
+  }
+
+  .detail {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--color-fg-subtle);
+  }
+
+  .card :global(.arrow) {
+    margin-left: auto;
+    flex-shrink: 0;
+    color: var(--color-fg-subtle);
+    transition:
+      transform var(--duration-base) var(--ease-out),
+      color var(--duration-fast) var(--ease-out);
+  }
+
+  .card:hover :global(.arrow) {
+    color: var(--color-fg);
+    transform: translate(2px, -2px);
+  }
+</style>

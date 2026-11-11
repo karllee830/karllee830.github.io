@@ -1,0 +1,41 @@
+/*
+ * Segmented control: 32px tall, 4px padding, outer radius 12
+ * → segments are 24px tall with radius 8 (12 − 4).
+ */
+.segmented {
+  --segmented-radius: var(--radius-3);
+  --segmented-padding: var(--space-1);
+  --sq-r: var(--segmented-radius);
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: var(--control-md);
+  padding: calc(var(--segmented-padding) - 1px);
+}
+
+.segment {
+  --sq-r: calc(var(--segmented-radius) - var(--segmented-padding));
+  display: inline-grid;
+  place-items: center;
+  min-width: var(--control-sm);
+  height: var(--control-sm);
+  padding-inline: var(--space-1);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  font-weight: var(--weight-medium);
+  color: var(--color-fg-subtle);
+  background-color: transparent;
+  transition:
+    color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out);
+}
+
+.segment:hover {
+  color: var(--color-fg);
+}
+
+.segment[aria-pressed="true"],
+.segment[aria-current] {
+  color: var(--color-fg);
+  background-color: var(--color-hover);
+}

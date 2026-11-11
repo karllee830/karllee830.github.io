@@ -1,0 +1,101 @@
+---
+import PixelWordmark from './PixelWordmark.astro';
+import { site, localize } from '../config/site';
+import { localePath, useTranslations, type Lang } from '../i18n/ui';
+import { withBase } from '../lib/url';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+const year = new Date().getFullYear();
+
+const siteLinks = [
+  { href: localePath(lang, '/'), label: t('nav.home') },
+  { href: localePath(lang, '/blog/'), label: t('nav.blog') },
+  { href: withBase('/rss.xml'), label: 'RSS' },
+];
+const elsewhere = site.links
+  .filter((link) => !link.internal)
+  .map((link) => ({ href: link.href, label: localize(link.label, lang) }));
+---
+
+<footer class="site-footer">
+  <div class="columns">
+    <section>
+      <h2>{t('footer.site')}</h2>
+      <ul>
+        {siteLinks.map((l) => (<li><a href={l.href}>{l.label}</a></li>))}
+      </ul>
+    </section>
+    <section>
+      <h2>{t('footer.elsewhere')}</h2>
+      <ul>
+        {elsewhere.map((l) => (<li><a href={l.href} rel="me noopener">{l.label}</a></li>))}
+      </ul>
+    </section>
+    <p class="copyright">© {year} {site.name}</p>
+  </div>
+  <PixelWordmark text={site.wordmark} label={site.name} />
+</footer>
+
+<style>
+  .site-footer {
+    display: grid;
+    gap: var(--space-12);
+    margin-top: var(--space-24);
+    padding: var(--space-12) var(--page-gutter) 0;
+    border-top: 1px solid var(--color-line);
+  }
+
+  .columns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-8) var(--space-6);
+  }
+
+  h2 {
+    margin-bottom: var(--space-3);
+    font-weight: var(--weight-regular);
+    color: var(--color-fg-subtle);
+  }
+
+  ul {
+    display: grid;
+    gap: var(--space-2);
+  }
+
+  a {
+    color: var(--color-fg-muted);
+    transition: color var(--duration-fast) var(--ease-out);
+  }
+
+  a:hover {
+    color: var(--color-fg);
+  }
+
+  .copyright {
+    grid-column: 1 / -1;
+    color: var(--color-fg-subtle);
+  }
+
+  @media (min-width: 768px) {
+    .columns {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .copyright {
+      grid-column: 4;
+      align-self: end;
+      text-align: right;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .site-footer {
+      padding-inline: var(--frame-padding);
+    }
+  }
+</style>

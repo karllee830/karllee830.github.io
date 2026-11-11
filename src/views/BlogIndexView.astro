@@ -1,0 +1,81 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import RevealText from '../components/RevealText.astro';
+import PostList from '../components/PostList.astro';
+import { useTranslations, type Lang } from '../i18n/ui';
+import { getPosts, type Post } from '../lib/posts';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+const posts = await getPosts();
+
+const years = new Map<number, Post[]>();
+for (const post of posts) {
+  const year = post.data.date.getUTCFullYear();
+  years.set(year, [...(years.get(year) ?? []), post]);
+}
+---
+
+<BaseLayout lang={lang} title={t('blog.title')} description={t('blog.description')} section="blog" routes={{ zh: '/blog/', en: '/blog/' }}>
+  <header class="page-header">
+    <h1><RevealText text={t('blog.title')} /></h1>
+    <p class="count"><span class="mono">{posts.length}</span> {t('blog.count')}</p>
+  </header>
+
+  {
+    posts.length === 0 ? (
+      <p class="empty">{t('home.empty')}</p>
+    ) : (
+      <div class="years">
+        {[...years].map(([year, list]) => (
+          <section class="year" aria-labelledby={`year-${year}`}>
+            <h2 id={`year-${year}`} class="mono">{year}</h2>
+            <PostList posts={list} lang={lang} short />
+          </section>
+        ))}
+      </div>
+    )
+  }
+</BaseLayout>
+
+<style>
+  .page-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-bottom: var(--space-10);
+  }
+
+  h1 {
+    font-size: var(--text-display);
+    line-height: var(--leading-display);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-tight);
+  }
+
+  .count {
+    color: var(--color-fg-subtle);
+  }
+
+  .years {
+    display: grid;
+    gap: var(--space-10);
+  }
+
+  .year h2 {
+    margin-bottom: var(--space-2);
+    font-size: var(--text-caption);
+    line-height: var(--leading-caption);
+    font-weight: var(--weight-regular);
+    color: var(--color-fg-subtle);
+  }
+
+  .empty {
+    color: var(--color-fg-subtle);
+  }
+</style>

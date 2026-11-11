@@ -1,0 +1,100 @@
+---
+// GitHub-issue comments via utterances, loaded only when scrolled near.
+import { site } from '../config/site';
+import { useTranslations, type Lang } from '../i18n/ui';
+
+interface Props {
+  lang: Lang;
+  /** Stable issue search term; independent of domain and base path. */
+  term: string;
+}
+
+const { lang, term } = Astro.props;
+const t = useTranslations(lang);
+const { repo, label } = site.comments;
+---
+
+<section class="comments" aria-labelledby="comments-title">
+  <h2 id="comments-title">{t('post.comments')}</h2>
+  <p class="note">{t('post.commentsNote')}</p>
+  <div class="frame sq sq-line" data-comments data-repo={repo} data-term={term} data-label={label}>
+    <p class="loading">{t('post.commentsLoading')}</p>
+  </div>
+</section>
+
+<style>
+  .comments {
+    display: grid;
+    gap: var(--space-2);
+  }
+
+  h2 {
+    font-weight: var(--weight-semibold);
+  }
+
+  .note {
+    color: var(--color-fg-subtle);
+  }
+
+  .frame {
+    --sq-r: var(--radius-4);
+    min-height: 200px;
+    margin-top: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+  }
+
+  .loading {
+    padding-block: var(--space-6);
+    color: var(--color-fg-subtle);
+  }
+
+  .frame :global(.utterances) {
+    max-width: none;
+  }
+
+  .frame.is-ready .loading {
+    display: none;
+  }
+</style>
+
+<script>
+  const ORIGIN = 'https://utteranc.es';
+  const themeName = () => (document.documentElement.dataset.theme === 'dark' ? 'github-dark' : 'github-light');
+
+  document.querySelectorAll<HTMLElement>('[data-comments]').forEach((box) => {
+    const load = () => {
+      const script = document.createElement('script');
+      script.src = `${ORIGIN}/client.js`;
+      script.async = true;
+      script.crossOrigin = 'anonymous';
+      script.setAttribute('repo', box.dataset.repo ?? '');
+      script.setAttribute('issue-term', box.dataset.term ?? 'pathname');
+      if (box.dataset.label) script.setAttribute('label', box.dataset.label);
+      script.setAttribute('theme', themeName());
+      box.appendChild(script);
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          observer.disconnect();
+          load();
+        }
+      },
+      { rootMargin: '600px 0px' },
+    );
+    observer.observe(box);
+  });
+
+  // utterances reports its height once it has rendered.
+  window.addEventListener('message', (event) => {
+    if (event.origin !== ORIGIN || event.data?.type !== 'resize') return;
+    document.querySelectorAll('[data-comments]').forEach((box) => box.classList.add('is-ready'));
+  });
+
+  // Keep the iframe in step with the site theme.
+  new MutationObserver(() => {
+    const frame = document.querySelector<HTMLIFrameElement>('iframe.utterances-frame');
+    frame?.contentWindow?.postMessage({ type: 'set-theme', theme: themeName() }, ORIGIN);
+  }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+</script>

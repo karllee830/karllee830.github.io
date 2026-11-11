@@ -1,0 +1,33 @@
+---
+import { useTranslations, type Lang } from '../i18n/ui';
+
+interface Props {
+  lang: Lang;
+  /** Href of the same page in each language. */
+  hrefs: Record<Lang, string>;
+}
+
+const { lang, hrefs } = Astro.props;
+const t = useTranslations(lang);
+const options = [
+  { value: 'zh', label: '中', name: '中文' },
+  { value: 'en', label: 'EN', name: 'English' },
+] as const;
+---
+
+<nav class="segmented sq sq-line" aria-label={t('lang.label')}>
+  {
+    options.map((o) => (
+      <a
+        class="segment sq"
+        href={hrefs[o.value]}
+        hreflang={o.value === 'zh' ? 'zh-CN' : 'en'}
+        lang={o.value === 'zh' ? 'zh-CN' : 'en'}
+        aria-current={o.value === lang ? 'true' : undefined}
+        aria-label={o.name}
+      >
+        {o.label}
+      </a>
+    ))
+  }
+</nav>

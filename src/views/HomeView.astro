@@ -1,0 +1,127 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import RevealText from '../components/RevealText.astro';
+import SectionHeader from '../components/SectionHeader.astro';
+import PostList from '../components/PostList.astro';
+import LinkGrid from '../components/LinkGrid.astro';
+import AsciiAvatar from '../components/react/AsciiAvatar';
+import ScrambleText from '../components/react/ScrambleText';
+import { site } from '../config/site';
+import { localePath, useTranslations, type Lang } from '../i18n/ui';
+import { getPosts } from '../lib/posts';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+const intro = site.intro[lang];
+const posts = (await getPosts()).slice(0, 5);
+const helloLength = [...intro.hello.replace(/\s/g, '')].length;
+const prefixLength = [...intro.prefix.replace(/\s/g, '')].length;
+---
+
+<BaseLayout lang={lang} section="home" routes={{ zh: '/', en: '/' }}>
+  <section class="hero" aria-labelledby="hero-title">
+    <h1 id="hero-title" class="statement">
+      <span class="hello"><RevealText text={intro.hello} /></span>
+      <span class="sub">
+        <RevealText text={intro.prefix} start={helloLength} /><span class="word"><ScrambleText client:idle words={intro.words} /></span><RevealText text={intro.suffix} start={helloLength + prefixLength + 2} />
+      </span>
+    </h1>
+
+    <AsciiAvatar
+      client:load
+      label={t('avatar.label')}
+      modesLabel={t('avatar.modes')}
+      replayLabel={t('avatar.replay')}
+      modeLabels={{ ascii: t('avatar.ascii'), pixel: t('avatar.pixel'), dots: t('avatar.dots') }}
+    />
+
+    <div class="bio">
+      {intro.bio.map((paragraph) => <p set:html={paragraph} />)}
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="writing-title">
+    <SectionHeader id="writing-title" title={t('home.writing')} moreHref={localePath(lang, '/blog/')} moreLabel={t('home.allPosts')} />
+    {posts.length > 0 ? <PostList posts={posts} lang={lang} /> : <p class="empty">{t('home.empty')}</p>}
+  </section>
+
+  <section class="section" id="links" aria-labelledby="links-title">
+    <SectionHeader id="links-title" title={t('home.links')} />
+    <LinkGrid lang={lang} />
+  </section>
+</BaseLayout>
+
+<style>
+  .hero {
+    display: grid;
+    gap: var(--space-8);
+  }
+
+  .statement {
+    display: grid;
+    font-size: var(--text-display);
+    line-height: var(--leading-display);
+    font-weight: var(--weight-medium);
+    letter-spacing: var(--tracking-tight);
+    text-wrap: initial;
+  }
+
+  .sub {
+    color: var(--color-fg-muted);
+  }
+
+  .word {
+    color: var(--color-accent-ink);
+  }
+
+  .bio {
+    display: grid;
+    gap: var(--space-4);
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+    color: var(--color-fg-muted);
+    max-width: 34em;
+  }
+
+  .bio :global(a) {
+    color: var(--color-fg);
+    text-decoration: underline;
+    text-decoration-color: var(--color-line-strong);
+    text-underline-offset: 3px;
+  }
+
+  .section {
+    margin-top: var(--space-16);
+    scroll-margin-top: calc(var(--topbar-height) + var(--space-6));
+  }
+
+  .empty {
+    color: var(--color-fg-subtle);
+  }
+
+  :global(.scramble) {
+    position: relative;
+    display: inline-block;
+    vertical-align: bottom;
+    white-space: nowrap;
+    transition: width var(--duration-slow) var(--ease-out);
+  }
+
+  :global(.scramble-sizer) {
+    position: absolute;
+    left: 0;
+    top: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  @media (min-width: 1024px) {
+    .section {
+      scroll-margin-top: var(--space-12);
+    }
+  }
+</style>

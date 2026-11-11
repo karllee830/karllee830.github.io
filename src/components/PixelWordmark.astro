@@ -1,0 +1,114 @@
+---
+// Text drawn with a 5×7 bitmap font as an SVG grid. Hovering a cell lights it
+// in the accent colour; the CSS transition leaves a fading trail. No JS.
+interface Props {
+  text: string;
+  /** Fraction of the glyph height left visible (the rest is cropped). */
+  crop?: number;
+  label?: string;
+}
+
+const FONT: Record<string, string> = {
+  A: '01110 10001 10001 11111 10001 10001 10001',
+  B: '11110 10001 10001 11110 10001 10001 11110',
+  C: '01110 10001 10000 10000 10000 10001 01110',
+  D: '11110 10001 10001 10001 10001 10001 11110',
+  E: '11111 10000 10000 11110 10000 10000 11111',
+  F: '11111 10000 10000 11110 10000 10000 10000',
+  G: '01110 10001 10000 10111 10001 10001 01111',
+  H: '10001 10001 10001 11111 10001 10001 10001',
+  I: '01110 00100 00100 00100 00100 00100 01110',
+  J: '00111 00010 00010 00010 00010 10010 01100',
+  K: '10001 10010 10100 11000 10100 10010 10001',
+  L: '10000 10000 10000 10000 10000 10000 11111',
+  M: '10001 11011 10101 10101 10001 10001 10001',
+  N: '10001 10001 11001 10101 10011 10001 10001',
+  O: '01110 10001 10001 10001 10001 10001 01110',
+  P: '11110 10001 10001 11110 10000 10000 10000',
+  Q: '01110 10001 10001 10001 10101 10010 01101',
+  R: '11110 10001 10001 11110 10100 10010 10001',
+  S: '01111 10000 10000 01110 00001 00001 11110',
+  T: '11111 00100 00100 00100 00100 00100 00100',
+  U: '10001 10001 10001 10001 10001 10001 01110',
+  V: '10001 10001 10001 10001 10001 01010 00100',
+  W: '10001 10001 10001 10101 10101 10101 01010',
+  X: '10001 10001 01010 00100 01010 10001 10001',
+  Y: '10001 10001 01010 00100 00100 00100 00100',
+  Z: '11111 00001 00010 00100 01000 10000 11111',
+  '0': '01110 10001 10011 10101 11001 10001 01110',
+  '1': '00100 01100 00100 00100 00100 00100 01110',
+  '2': '01110 10001 00001 00010 00100 01000 11111',
+  '3': '11111 00010 00100 00010 00001 10001 01110',
+  '4': '00010 00110 01010 10010 11111 00010 00010',
+  '5': '11111 10000 11110 00001 00001 10001 01110',
+  '6': '00110 01000 10000 11110 10001 10001 01110',
+  '7': '11111 00001 00010 00100 01000 01000 01000',
+  '8': '01110 10001 10001 01110 10001 10001 01110',
+  '9': '01110 10001 10001 01111 00001 00010 01100',
+  '-': '00000 00000 00000 11111 00000 00000 00000',
+  ' ': '00000 00000 00000 00000 00000 00000 00000',
+};
+
+const { text, crop = 0.93, label } = Astro.props;
+const CELL = 10;
+const GAP = 1;
+const glyphs = [...text.toUpperCase()].map((ch) => (FONT[ch] ?? FONT[' ']).split(' '));
+const columns = glyphs.length * 5 + Math.max(0, glyphs.length - 1);
+const width = columns * CELL - GAP;
+const height = 7 * CELL - GAP;
+const visibleHeight = Math.round(height * crop);
+
+const cells: { x: number; y: number; on: boolean }[] = [];
+glyphs.forEach((rows, g) => {
+  const offset = g * 6;
+  for (let y = 0; y < 7; y++) {
+    for (let x = 0; x < 5; x++) cells.push({ x: offset + x, y, on: rows[y][x] === '1' });
+    if (g < glyphs.length - 1) cells.push({ x: offset + 5, y, on: false });
+  }
+});
+---
+
+<div class="wordmark" style={`aspect-ratio:${width}/${visibleHeight}`}>
+  <svg viewBox={`0 0 ${width} ${height}`} role={label ? 'img' : undefined} aria-label={label} aria-hidden={label ? undefined : 'true'}>
+    {
+      cells.map((c) => (
+        <rect class={c.on ? 'on' : 'off'} x={c.x * CELL} y={c.y * CELL} width={CELL - GAP} height={CELL - GAP} />
+      ))
+    }
+  </svg>
+</div>
+
+<style>
+  .wordmark {
+    width: 100%;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  svg {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+
+  rect {
+    transition: fill 1.6s var(--ease-out);
+  }
+
+  .on {
+    fill: var(--color-wordmark);
+  }
+
+  .off {
+    fill: transparent;
+  }
+
+  rect:hover {
+    fill: var(--color-accent);
+    transition-duration: 0s;
+  }
+
+  .off:hover {
+    fill: var(--color-accent-soft);
+  }
+</style>

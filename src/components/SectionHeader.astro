@@ -1,0 +1,59 @@
+---
+import Icon from './Icon.astro';
+
+interface Props {
+  id: string;
+  title: string;
+  moreHref?: string;
+  moreLabel?: string;
+}
+
+const { id, title, moreHref, moreLabel } = Astro.props;
+---
+
+<header class="section-header">
+  <h2 id={id}>{title}</h2>
+  {
+    moreHref && (
+      <a class="more" href={moreHref}>
+        {moreLabel}
+        <Icon name="arrow-right" size={14} />
+      </a>
+    )
+  }
+</header>
+
+<style>
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+  }
+
+  h2 {
+    font-weight: var(--weight-semibold);
+  }
+
+  .more {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    color: var(--color-fg-muted);
+    transition: color var(--duration-fast) var(--ease-out);
+  }
+
+  .more :global(svg) {
+    align-self: center;
+    transition: transform var(--duration-base) var(--ease-out);
+  }
+
+  .more:hover {
+    color: var(--color-fg);
+  }
+
+  .more:hover :global(svg) {
+    transform: translateX(2px);
+  }
+</style>

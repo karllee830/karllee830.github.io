@@ -1,0 +1,53 @@
+---
+// Splits text into characters that fade in one after another.
+// Words stay unbreakable; CJK text still wraps between characters.
+interface Props {
+  text: string;
+  /** Index of the first character, to continue a sequence. */
+  start?: number;
+}
+
+const { text, start = 0 } = Astro.props;
+const CJK = /[぀-ヿ㐀-鿿豈-﫿　-〿＀-￯]/;
+
+// Latin runs become one word; each CJK character is its own word.
+const tokens: string[] = [];
+for (const part of text.split(/(\s+)/)) {
+  if (!part) continue;
+  if (/^\s+$/.test(part)) {
+    tokens.push(' ');
+    continue;
+  }
+  let run = '';
+  for (const ch of part) {
+    if (CJK.test(ch)) {
+      if (run) tokens.push(run);
+      run = '';
+      tokens.push(ch);
+    } else run += ch;
+  }
+  if (run) tokens.push(run);
+}
+
+let index = start;
+const words = tokens.map((token) => {
+  if (token === ' ') return null;
+  return [...token].map((ch) => ({ ch, i: index++ }));
+});
+---
+
+<span class="sr-only">{text}</span><span aria-hidden="true">{
+  words.map((word) =>
+    word === null ? (
+      ' '
+    ) : (
+      <span class="reveal-word">
+        {word.map(({ ch, i }) => (
+          <span class="reveal-char" style={`--i:${i}`}>
+            {ch}
+          </span>
+        ))}
+      </span>
+    ),
+  )
+}</span>

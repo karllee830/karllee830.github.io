@@ -1,0 +1,33 @@
+{
+  "name": "karl-homepage",
+  "type": "module",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.23.4"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "avatar": "node scripts/avatar-to-matrix.mjs",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/react": "^7.1.7",
+    "@astrojs/rss": "^4.0.19",
+    "@astrojs/sitemap": "^3.7.4",
+    "@fontsource-variable/geist": "^5.3.0",
+    "@fontsource-variable/geist-mono": "^5.3.0",
+    "astro": "^7.4.10",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.12",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "typescript": "^6.0.3"
+  }
+}

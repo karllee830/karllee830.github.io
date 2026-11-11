@@ -1,0 +1,150 @@
+/*
+ * Design tokens.
+ * Spacing, radius and layout values sit on a 4px grid.
+ * Nested rounded surfaces follow the concentric rule:
+ *   inner radius = outer radius − padding between them.
+ */
+
+:root {
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* Radius */
+  --radius-1: 4px;
+  --radius-2: 8px;
+  --radius-3: 12px;
+  --radius-4: 16px;
+  --radius-5: 20px;
+  --radius-6: 24px;
+  --radius-pill: 999px;
+
+  /* Control sizes */
+  --control-sm: 24px;
+  --control-md: 32px;
+  --control-lg: 40px;
+
+  /* Typography */
+  --font-sans: var(--font-geist), "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --text-caption: 12px;
+  --leading-caption: 16px;
+  --text-ui: 14px;
+  --leading-ui: 20px;
+  --text-body: 14px;
+  --leading-body: 24px;
+  --text-prose: 16px;
+  --leading-prose: 28px;
+  --text-title: 20px;
+  --leading-title: 28px;
+  --text-display: 24px;
+  --leading-display: 32px;
+  --text-headline: 28px;
+  --leading-headline: 36px;
+
+  --weight-regular: 450;
+  --weight-medium: 520;
+  --weight-semibold: 600;
+
+  --tracking-tight: -0.02em;
+  --tracking-snug: -0.01em;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 400ms;
+
+  /* Layout */
+  --sidebar-width: 160px;
+  --content-width: 600px;
+  --layout-gap: var(--space-16);
+  --frame-padding: var(--space-12);
+  --page-gutter: var(--space-4);
+  --topbar-height: 56px;
+
+  /* Color — light */
+  --color-bg: #fafafa;
+  --color-surface: #ffffff;
+  --color-surface-2: #f4f4f4;
+  --color-hover: #f0f0f0;
+  --color-fg: #0a0a0a;
+  --color-fg-muted: #666666;
+  --color-fg-subtle: #a3a3a3;
+  --color-on-fg: #fafafa;
+  --color-line: #e8e8e8;
+  --color-line-strong: #d4d4d4;
+  --color-hatch: #ececec;
+  --color-wordmark: #eeeeee;
+  /* Accent — the cap band blue from the avatar */
+  --color-accent: #669fd0;
+  --color-accent-ink: #2f6a9d;
+  --color-accent-soft: rgb(102 159 208 / 0.16);
+
+  /* Code (consumed by Shiki's css-variables theme) */
+  --astro-code-foreground: var(--color-fg);
+  --astro-code-background: var(--color-surface-2);
+  --astro-code-token-comment: #9a9a9a;
+  --astro-code-token-keyword: #0a0a0a;
+  --astro-code-token-string: #2f6a9d;
+  --astro-code-token-string-expression: #2f6a9d;
+  --astro-code-token-constant: #3f5f8a;
+  --astro-code-token-function: #0a0a0a;
+  --astro-code-token-parameter: #555555;
+  --astro-code-token-punctuation: #8a8a8a;
+  --astro-code-token-link: #2f6a9d;
+
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --color-bg: #0a0a0a;
+  --color-surface: #101010;
+  --color-surface-2: #151515;
+  --color-hover: #1a1a1a;
+  --color-fg: #ededed;
+  --color-fg-muted: #a1a1a1;
+  --color-fg-subtle: #5c5c5c;
+  --color-on-fg: #0a0a0a;
+  --color-line: #1f1f1f;
+  --color-line-strong: #2e2e2e;
+  --color-hatch: #161616;
+  --color-wordmark: #151515;
+  --color-accent: #669fd0;
+  --color-accent-ink: #8cbae3;
+  --color-accent-soft: rgb(102 159 208 / 0.2);
+
+  --astro-code-token-comment: #6b6b6b;
+  --astro-code-token-keyword: #ededed;
+  --astro-code-token-string: #8cbae3;
+  --astro-code-token-string-expression: #8cbae3;
+  --astro-code-token-constant: #a9c8e8;
+  --astro-code-token-function: #ededed;
+  --astro-code-token-parameter: #b5b5b5;
+  --astro-code-token-punctuation: #7a7a7a;
+  --astro-code-token-link: #8cbae3;
+
+  color-scheme: dark;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --text-display: 28px;
+    --leading-display: 36px;
+    --text-headline: 32px;
+    --leading-headline: 40px;
+    --page-gutter: var(--space-8);
+  }
+}

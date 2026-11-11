@@ -1,0 +1,197 @@
+/* Long-form article typography */
+.prose {
+  font-size: var(--text-prose);
+  line-height: var(--leading-prose);
+  color: var(--color-fg);
+  overflow-wrap: break-word;
+}
+
+.prose > * + * {
+  margin-top: var(--space-5);
+}
+
+.prose :is(h2, h3, h4) {
+  scroll-margin-top: calc(var(--topbar-height) + var(--space-6));
+  letter-spacing: var(--tracking-snug);
+}
+
+.prose h2 {
+  margin-top: var(--space-12);
+  font-size: var(--text-title);
+  line-height: var(--leading-title);
+}
+
+.prose h3 {
+  margin-top: var(--space-8);
+  font-size: var(--text-prose);
+  line-height: var(--leading-prose);
+}
+
+.prose h4 {
+  margin-top: var(--space-6);
+  color: var(--color-fg-muted);
+}
+
+.prose :is(h2, h3, h4) + * {
+  margin-top: var(--space-3);
+}
+
+.prose a {
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--color-accent);
+  transition: text-decoration-color var(--duration-fast) var(--ease-out);
+}
+
+.prose a:hover {
+  text-decoration-color: currentColor;
+}
+
+.prose strong {
+  font-weight: var(--weight-semibold);
+}
+
+.prose :is(ul, ol) {
+  padding-left: var(--space-6);
+}
+
+.prose ul {
+  list-style: none;
+}
+
+.prose ul > li {
+  position: relative;
+}
+
+.prose ul > li::before {
+  content: "";
+  position: absolute;
+  left: calc(-1 * var(--space-4));
+  top: calc(var(--leading-prose) / 2 - 2px);
+  width: 4px;
+  height: 4px;
+  background-color: var(--color-fg-subtle);
+}
+
+.prose ol {
+  list-style: decimal;
+}
+
+.prose ol > li::marker {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  color: var(--color-fg-subtle);
+}
+
+.prose li + li {
+  margin-top: var(--space-2);
+}
+
+.prose li > :is(ul, ol) {
+  margin-top: var(--space-2);
+}
+
+.prose blockquote {
+  padding-left: var(--space-4);
+  border-left: 2px solid var(--color-line-strong);
+  color: var(--color-fg-muted);
+}
+
+.prose hr {
+  height: 1px;
+  margin-block: var(--space-12);
+  border: 0;
+  background-image: linear-gradient(to right, var(--color-line-strong) 50%, transparent 0);
+  background-size: 8px 1px;
+}
+
+.prose :not(pre) > code {
+  padding: 2px var(--space-1);
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  background-color: var(--color-surface-2);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-1);
+}
+
+.prose pre {
+  padding: var(--space-4);
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 20px;
+  tab-size: 2;
+  background-color: var(--color-surface-2) !important;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-3);
+}
+
+@supports (corner-shape: squircle) {
+  .prose pre,
+  .prose img {
+    corner-shape: squircle;
+    border-radius: var(--radius-5);
+  }
+}
+
+.prose pre code {
+  font-family: inherit;
+}
+
+.prose img {
+  width: 100%;
+  border-radius: var(--radius-3);
+  background-color: var(--color-surface-2);
+}
+
+.prose figure figcaption {
+  margin-top: var(--space-2);
+  font-size: var(--text-ui);
+  line-height: var(--leading-ui);
+  color: var(--color-fg-subtle);
+  text-align: center;
+}
+
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-ui);
+  line-height: var(--leading-ui);
+  font-variant-numeric: tabular-nums;
+}
+
+.prose :is(th, td) {
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.prose th {
+  font-weight: var(--weight-semibold);
+  border-bottom-color: var(--color-line-strong);
+}
+
+.prose .table-wrap,
+.prose > table {
+  display: block;
+  overflow-x: auto;
+}
+
+.prose kbd {
+  padding: 0 var(--space-1);
+  font-family: var(--font-mono);
+  font-size: 0.8125em;
+  border: 1px solid var(--color-line-strong);
+  border-bottom-width: 2px;
+  border-radius: var(--radius-1);
+}
+
+.prose input[type="checkbox"] {
+  margin-right: var(--space-2);
+  accent-color: var(--color-accent);
+}
+
+.prose li:has(> input[type="checkbox"])::before {
+  display: none;
+}
