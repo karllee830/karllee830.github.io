@@ -24,8 +24,8 @@ export const site = {
   repo: 'karllee830/HomePageTry4',
 
   /**
-   * Issue-based comments via utterances.
-   * Install https://github.com/apps/utterances on `repo` before enabling.
+   * Reviewed comments from GitHub Issues: one issue per post, titled "blog/<slug>" and
+   * labelled `label`. `repo` must be this repository, where the moderation workflow runs.
    */
   comments: {
     enabled: true,

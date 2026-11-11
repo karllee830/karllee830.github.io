@@ -1,25 +1,63 @@
 ---
-// GitHub-issue comments via utterances, loaded only when scrolled near.
+// Approved comments of a post, fetched at build time from its GitHub issue (see
+// src/lib/comments.ts), and a link to write one there. Visitors' comments show up after
+// review and the next deploy; the repository owner's right away.
+import Icon from './Icon.astro';
 import { site } from '../config/site';
 import { useTranslations, type Lang } from '../i18n/ui';
+import { getThreads } from '../lib/comments';
+import { formatDate } from '../lib/posts';
 
 interface Props {
   lang: Lang;
-  /** Stable issue search term; independent of domain and base path. */
+  /** Title of the post's comment issue; independent of domain and base path. */
   term: string;
 }
 
 const { lang, term } = Astro.props;
 const t = useTranslations(lang);
-const { repo, label } = site.comments;
+const thread = (await getThreads()).get(term);
+const comments = thread?.comments ?? [];
+// Before the deploy workflow has opened the issue, search for it instead.
+const writeHref = thread
+  ? `${thread.issueUrl}#new_comment_field`
+  : `https://github.com/${site.comments.repo}/issues?q=${encodeURIComponent(`is:issue "${term}"`)}`;
 ---
 
 <section class="comments" aria-labelledby="comments-title">
-  <h2 id="comments-title">{t('post.comments')}</h2>
+  <h2 id="comments-title">
+    {t('post.comments')}
+    {comments.length > 0 && <span class="count mono">{comments.length}</span>}
+  </h2>
   <p class="note">{t('post.commentsNote')}</p>
-  <div class="frame sq sq-line" data-comments data-repo={repo} data-term={term} data-label={label}>
-    <p class="loading">{t('post.commentsLoading')}</p>
-  </div>
+
+  {
+    comments.length > 0 ? (
+      <ol class="list">
+        {comments.map((c) => (
+          <li class="comment sq sq-line" id={`comment-${c.id}`}>
+            <header class="head">
+              <img class="avatar" src={`${c.avatar}&s=56`} width="28" height="28" alt="" loading="lazy" decoding="async" />
+              <a class="author" href={c.authorUrl} rel="nofollow noopener">
+                {c.author}
+              </a>
+              <a class="date mono" href={c.url} rel="nofollow noopener">
+                <time datetime={c.createdAt.toISOString()}>{formatDate(c.createdAt)}</time>
+              </a>
+            </header>
+            <div class="body prose" set:html={c.html} />
+          </li>
+        ))}
+      </ol>
+    ) : (
+      <p class="empty">{t('post.commentsEmpty')}</p>
+    )
+  }
+
+  <a class="write sq sq-line" href={writeHref} target="_blank" rel="noopener">
+    <Icon name="github" size={18} />
+    {t('post.commentsWrite')}
+  </a>
 </section>
 
 <style>
@@ -29,72 +67,95 @@ const { repo, label } = site.comments;
   }
 
   h2 {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
     font-weight: var(--weight-semibold);
   }
 
-  .note {
+  .count {
+    font-size: var(--text-caption);
+    font-weight: var(--weight-regular);
     color: var(--color-fg-subtle);
   }
 
-  .frame {
-    --sq-r: var(--radius-4);
-    min-height: 200px;
+  .note,
+  .empty {
+    color: var(--color-fg-subtle);
+  }
+
+  .list {
+    display: grid;
+    gap: var(--space-3);
     margin-top: var(--space-2);
-    padding: var(--space-2) var(--space-4);
   }
 
-  .loading {
-    padding-block: var(--space-6);
+  .comment {
+    --sq-r: var(--radius-4);
+    display: grid;
+    gap: var(--space-3);
+    padding: var(--space-4);
+  }
+
+  .head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+
+  .avatar {
+    flex-shrink: 0;
+    border-radius: 50%;
+    background-color: var(--color-surface-2);
+  }
+
+  .author {
+    overflow: hidden;
+    font-weight: var(--weight-medium);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .date {
+    margin-left: auto;
+    font-size: var(--text-caption);
     color: var(--color-fg-subtle);
   }
 
-  .frame :global(.utterances) {
-    max-width: none;
+  .author:hover,
+  .date:hover {
+    color: var(--color-fg);
   }
 
-  .frame.is-ready .loading {
-    display: none;
+  /* Comment text uses the post's typography, a step smaller. */
+  .body {
+    font-size: var(--text-body);
+  }
+
+  .write {
+    --sq-r: var(--radius-3);
+    --sq-bg: var(--color-surface);
+    justify-self: start;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    height: var(--control-lg);
+    margin-top: var(--space-2);
+    padding-inline: var(--space-4);
+    font-weight: var(--weight-medium);
+    transition:
+      --sq-bg var(--duration-fast) var(--ease-out),
+      --sq-border var(--duration-fast) var(--ease-out),
+      transform var(--duration-fast) var(--ease-out);
+  }
+
+  .write:hover {
+    --sq-bg: var(--color-hover);
+    --sq-border: var(--color-line-strong);
+  }
+
+  .write:active {
+    transform: scale(0.97);
   }
 </style>
-
-<script>
-  const ORIGIN = 'https://utteranc.es';
-  const themeName = () => (document.documentElement.dataset.theme === 'dark' ? 'github-dark' : 'github-light');
-
-  document.querySelectorAll<HTMLElement>('[data-comments]').forEach((box) => {
-    const load = () => {
-      const script = document.createElement('script');
-      script.src = `${ORIGIN}/client.js`;
-      script.async = true;
-      script.crossOrigin = 'anonymous';
-      script.setAttribute('repo', box.dataset.repo ?? '');
-      script.setAttribute('issue-term', box.dataset.term ?? 'pathname');
-      if (box.dataset.label) script.setAttribute('label', box.dataset.label);
-      script.setAttribute('theme', themeName());
-      box.appendChild(script);
-    };
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          observer.disconnect();
-          load();
-        }
-      },
-      { rootMargin: '600px 0px' },
-    );
-    observer.observe(box);
-  });
-
-  // utterances reports its height once it has rendered.
-  window.addEventListener('message', (event) => {
-    if (event.origin !== ORIGIN || event.data?.type !== 'resize') return;
-    document.querySelectorAll('[data-comments]').forEach((box) => box.classList.add('is-ready'));
-  });
-
-  // Keep the iframe in step with the site theme.
-  new MutationObserver(() => {
-    const frame = document.querySelector<HTMLIFrameElement>('iframe.utterances-frame');
-    frame?.contentWindow?.postMessage({ type: 'set-theme', theme: themeName() }, ORIGIN);
-  }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-</script>

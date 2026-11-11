@@ -1,0 +1,33 @@
+name: Moderate comments
+
+# Visitors comment on a post's issue (label "comment"). For each comment the bot posts a
+# review note with "Approve" / "Reject" checkboxes; ticking one runs this again, records
+# the decision and redeploys the site. See scripts/comments/moderation.mjs.
+
+on:
+  issue_comment:
+    types: [created, edited, deleted]
+
+permissions:
+  contents: read
+  issues: write
+  actions: write
+
+concurrency:
+  group: comments-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  moderate:
+    if: ${{ !github.event.issue.pull_request && contains(github.event.issue.labels.*.name, 'comment') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: scripts/comments
+
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const { default: moderate } = await import(`${process.env.GITHUB_WORKSPACE}/scripts/comments/moderate.mjs`);
+            await moderate({ github, context, core });

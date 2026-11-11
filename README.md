@@ -23,13 +23,14 @@ See [`posts/README.md`](posts/README.md) for every frontmatter field. Chinese po
 
 ## Comments
 
-Comments use [utterances](https://utteranc.es): each post maps to one GitHub issue in the configured repository.
+Comments live in GitHub Issues and are reviewed before they appear on the site.
 
-1. Make sure the repository is public.
-2. Install the [utterances app](https://github.com/apps/utterances) on it.
-3. Check `comments` in [`src/config/site.ts`](src/config/site.ts) (`repo`, `label`, or `enabled: false` to turn them off).
+- Each post has one issue, titled `blog/<slug>` and labelled `comment`; the deploy workflow opens missing ones. Both language versions of a post share it.
+- Visitors comment on that issue (the post links to it). [`.github/workflows/comments.yml`](.github/workflows/comments.yml) answers each new comment with a review note holding two checkboxes, **Approve** and **Reject**.
+- Tick one: the note records the decision and, on approval, redeploys the site. Approved notes offer **Undo** to review again. Only people with write access can decide.
+- The site is static, so comments are fetched while building ([`src/lib/comments.ts`](src/lib/comments.ts)): the owner's comments and approved ones, in GitHub's sanitised HTML. Editing an approved comment sends it back to review.
 
-Issues are matched by a stable term (`blog/<post-id>`), so comments survive a domain or base-path change.
+Setup: the repository must be public, and `comments` in [`src/config/site.ts`](src/config/site.ts) must point at it (`enabled: false` turns comments off). Pending comments are visible on GitHub itself, only not on the site.
 
 ## Deploying to GitHub Pages
 
@@ -67,7 +68,7 @@ The avatar must be a pixel-art SVG built from `<rect>` elements with a `viewBox`
 - Static HTML; JavaScript only for the hero islands on the home page and a ~2 KB script for theme and corners elsewhere.
 - Latin subsets of Google Sans Flex and Google Sans Code (SIL Open Font License) are self-hosted with metric-matched fallbacks; Chinese text uses system fonts.
 - Post images are converted to WebP with responsive sizes at build time.
-- Comments load only when scrolled near.
+- Comments are part of the static page; only commenters' avatars load from GitHub.
 
 ## Project layout
 

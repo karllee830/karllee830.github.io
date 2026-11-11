@@ -3,12 +3,15 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+  # Also started by the comment moderation workflow when a comment is approved.
   workflow_dispatch:
 
 permissions:
   contents: read
   pages: write
   id-token: write
+  # Opens a comment issue per post and reads approved comments.
+  issues: write
 
 concurrency:
   group: pages
@@ -31,11 +34,19 @@ jobs:
 
       - run: npm ci
 
+      - name: Open comment issues
+        run: node scripts/comments/ensure-issues.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SITE_URL: ${{ steps.pages.outputs.origin }}
+          BASE_PATH: ${{ steps.pages.outputs.base_path }}
+
       - name: Build
         run: npm run build
         env:
           SITE_URL: ${{ steps.pages.outputs.origin }}
           BASE_PATH: ${{ steps.pages.outputs.base_path }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/upload-pages-artifact@v4
         with:
