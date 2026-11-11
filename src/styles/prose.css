@@ -144,6 +144,124 @@
   background-color: var(--color-surface-2);
 }
 
+/* Post images open in a viewer on click (src/lib/image-zoom.ts). */
+.prose img.zoomable {
+  cursor: zoom-in;
+}
+
+.prose img.zoomable:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.zoom-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  outline: none;
+}
+
+.zoom-backdrop {
+  position: absolute;
+  inset: 0;
+  background-color: color-mix(in srgb, var(--color-bg) 90%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* The image's area: everything above the caption and toolbar. */
+.zoom-stage {
+  position: absolute;
+  inset: 0 0 var(--zoom-bottom, 64px);
+  display: grid;
+  place-items: center;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.zoom-image {
+  max-width: none;
+  border-radius: var(--radius-3);
+  background-color: var(--color-surface-2);
+  transform-origin: center;
+  cursor: zoom-in;
+  -webkit-user-drag: none;
+}
+
+.zoom-image.is-zoomed {
+  cursor: grab;
+}
+
+.zoom-image.is-dragging {
+  cursor: grabbing;
+}
+
+.zoom-bottom {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom));
+}
+
+.zoom-caption {
+  max-width: 40em;
+  font-size: var(--text-ui);
+  line-height: var(--leading-ui);
+  color: var(--color-fg-muted);
+  text-align: center;
+}
+
+/* 40px bar, 4px inset → 32px buttons with radius 8 (12 − 4). */
+.zoom-bar {
+  --sq-r: var(--radius-3);
+  --sq-bg: var(--color-surface);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: var(--control-lg);
+  padding: 3px;
+}
+
+.zoom-button,
+.zoom-level {
+  --sq-r: calc(var(--radius-3) - var(--space-1));
+  display: inline-grid;
+  place-items: center;
+  height: var(--control-md);
+  color: var(--color-fg-muted);
+  transition:
+    color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out);
+}
+
+.zoom-button {
+  width: var(--control-md);
+}
+
+.zoom-level {
+  min-width: 56px;
+  padding-inline: var(--space-2);
+  font-size: var(--text-caption);
+  font-variant-numeric: tabular-nums;
+}
+
+.zoom-button:hover:not(:disabled),
+.zoom-level:hover {
+  color: var(--color-fg);
+  background-color: var(--color-hover);
+}
+
+.zoom-button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
 .prose figure figcaption {
   margin-top: var(--space-2);
   font-size: var(--text-ui);

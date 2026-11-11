@@ -362,6 +362,11 @@ const nextLink = next
 </style>
 
 <script>
+  import { initImageZoom } from '../lib/image-zoom';
+  initImageZoom();
+</script>
+
+<script>
   // Footnote links (the number and the ↩ back link) bring their target to the middle of
   // the screen rather than the top, and light it up once it has arrived so the eye finds it.
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
