@@ -7,7 +7,6 @@ import Icon from '../components/Icon.astro';
 import LangBadge from '../components/LangBadge.astro';
 import { site } from '../config/site';
 import { localePath, useTranslations, type Lang, type OutlineItem } from '../i18n/ui';
-import { withBase } from '../lib/url';
 import { formatDate, postHref, postSlug, readingMinutes, type Post, type PostEntry } from '../lib/posts';
 import '../styles/prose.css';
 
@@ -84,6 +83,9 @@ const nextLink = next
             </>
           )
         }
+        <a class="post-feed" href={localePath(lang, `/blog/${slug}/rss.xml`)} aria-label={t('post.rss')} title={t('post.rss')}>
+          <Icon name="rss" size={20} />
+        </a>
       </p>
       {
         tags.length > 0 && (
@@ -120,13 +122,13 @@ const nextLink = next
             </a>
           )
         }
+        <a class="end-action sq sq-line" href={`mailto:${site.email}`}>
+          <Icon name="mail" size={18} />
+          {t('end.email')}
+        </a>
         <a class="end-action sq sq-line" href={`https://github.com/${site.github}`} rel="me noopener">
           <Icon name="github" size={18} />
           GitHub
-        </a>
-        <a class="end-action sq sq-line" href={withBase('/rss.xml')}>
-          <Icon name="rss" size={18} />
-          {t('end.subscribe')}
         </a>
       </div>
     </aside>
@@ -168,8 +170,25 @@ const nextLink = next
   .meta {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: var(--space-2);
     color: var(--color-fg-subtle);
+  }
+
+  /* This post's own feed, quiet until hovered like the sidebar feed link. */
+  .post-feed {
+    display: inline-grid;
+    place-items: center;
+  }
+
+  .post-feed :global(.kubai-icon) {
+    opacity: 0.45;
+    transition: opacity var(--duration-fast) var(--ease-out);
+  }
+
+  .post-feed:hover :global(.kubai-icon),
+  .post-feed:focus-visible :global(.kubai-icon) {
+    opacity: 1;
   }
 
   .tags {

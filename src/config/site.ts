@@ -15,10 +15,13 @@ export interface SiteLink {
   copy?: string;
 }
 
+const EMAIL = 'karllee0830@gmail.com';
+
 export const site = {
   name: 'Karl Coding',
   /** How the site owner is named, e.g. on their own comments. */
   author: 'Karl',
+  email: EMAIL,
   /** Drawn as the pixel wordmark in the footer (A–Z, 0–9). */
   wordmark: 'KARL',
   github: 'karllee830',
@@ -89,8 +92,8 @@ export const site = {
     },
     {
       label: { zh: '邮箱', en: 'Email' },
-      detail: 'karllee0830@gmail.com',
-      href: 'mailto:karllee0830@gmail.com',
+      detail: EMAIL,
+      href: `mailto:${EMAIL}`,
       icon: 'mail',
     },
     {
