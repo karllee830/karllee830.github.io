@@ -6,9 +6,11 @@ import { withBase } from '../lib/url';
 
 interface Props {
   class?: string;
+  /** Load the badge right away, for a copy that is on screen when the page opens. */
+  eager?: boolean;
 }
 
-const { class: className } = Astro.props;
+const { class: className, eager = false } = Astro.props;
 const { icp, police } = site.beian;
 ---
 
@@ -22,7 +24,7 @@ const { icp, police } = site.beian;
       )}
       {police && (
         <a href={`https://beian.mps.gov.cn/#/query/webSearch?code=${police.code}`} target="_blank" rel="noopener">
-          <img class="badge" src={withBase('/beian-police.png')} width="14" height="15" alt="" decoding="async" loading="lazy" />
+          <img class="badge" src={withBase('/beian-police.png')} width="14" height="15" alt="" decoding="async" loading={eager ? 'eager' : 'lazy'} />
           {police.text}
         </a>
       )}
