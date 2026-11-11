@@ -5,17 +5,17 @@ import { buildAvatarModel } from './avatar-model';
  * Canvas renderer for the hero avatar.
  *
  * The canvas is a grid of 12×12 "units"; each avatar pixel maps to one
- * unit, drawn as two monospace glyphs (ASCII), a block (Pixel) or a
- * halftone dot (Dots). Units outside the figure form a quiet dot field
+ * unit, drawn as two monospace glyphs (ASCII), a block (Pixel), a
+ * halftone dot (Dots) or a 4×4 ordered-dither cell (Dither). Units outside the figure form a quiet dot field
  * that lights up around the pointer and on tap ripples.
  *
  * The loop only runs while something is moving, so an idle hero costs
  * nothing.
  */
 
-export type RenderMode = 'ascii' | 'pixel' | 'dots';
+export type RenderMode = 'ascii' | 'pixel' | 'dots' | 'dither';
 
-const MODES: RenderMode[] = ['ascii', 'pixel', 'dots'];
+const MODES: RenderMode[] = ['ascii', 'pixel', 'dots', 'dither'];
 const NONE = -1;
 
 const UNIT = 12;
@@ -27,6 +27,11 @@ const POINTER_RADIUS = 84;
 const RIPPLE_SPEED = 0.4;
 const RIPPLE_WIDTH = 24;
 const RIPPLE_LIFE = 1400;
+
+// Ordered (Bayer 4×4) dithering: each unit splits into 4×4 sub-pixels of 3px.
+const DITHER_CELLS = 4;
+const DITHER_SIZE = UNIT / DITHER_CELLS;
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v + 0.5) / 16);
 
 export interface AsciiEngine {
   setMode(mode: RenderMode): void;
@@ -148,6 +153,23 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
 
   const noiseGlyph = (i: number, now: number) => NOISE[(seed[i] + ((now / 70) | 0)) % NOISE.length];
 
+  /**
+   * Fills the sub-pixels of the unit at column c, row r whose Bayer
+   * threshold is below `density`. The matrix is indexed by absolute
+   * sub-pixel position, so neighbouring units form one continuous pattern.
+   */
+  function ditherUnit(c: number, r: number, density: number) {
+    const x = originX + c * UNIT;
+    const y = originY + r * UNIT;
+    for (let sy = 0; sy < DITHER_CELLS; sy++) {
+      for (let sx = 0; sx < DITHER_CELLS; sx++) {
+        if (density > BAYER[sy * DITHER_CELLS + sx]) {
+          ctx!.fillRect(x + sx * DITHER_SIZE, y + sy * DITHER_SIZE, DITHER_SIZE, DITHER_SIZE);
+        }
+      }
+    }
+  }
+
   function drawField(i: number, cx: number, cy: number, now: number) {
     const h = heat[i];
     if (h < 0.04) {
@@ -164,6 +186,9 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
     } else if (mode === 1) {
       const s = 2 + h * (UNIT - 4);
       ctx!.fillRect(cx - s / 2, cy - s / 2, s, s);
+    } else if (mode === 3) {
+      ctx!.globalAlpha = 1;
+      ditherUnit(i % cols, (i / cols) | 0, h * 0.9);
     } else {
       ctx!.beginPath();
       ctx!.arc(cx, cy, 0.8 + h * 4, 0, Math.PI * 2);
@@ -207,6 +232,20 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
         ctx!.fillStyle = colors.accent;
         ctx!.globalAlpha = h * 0.85;
         ctx!.fillRect(x + 1, y + 1, UNIT - 2, UNIT - 2);
+      }
+      return;
+    }
+
+    if (m === 3) {
+      // 1-bit look: full-strength colour, tone carried by sub-pixel density.
+      const c = i % cols;
+      const r = (i / cols) | 0;
+      ctx!.globalAlpha = 1;
+      ctx!.fillStyle = isAccent ? colors.accent : colors.fg;
+      ditherUnit(c, r, isAccent ? 0.35 + 0.65 * t : t);
+      if (h > 0.02) {
+        ctx!.fillStyle = colors.accent;
+        ditherUnit(c, r, h);
       }
       return;
     }

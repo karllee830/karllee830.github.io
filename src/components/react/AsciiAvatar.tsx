@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type 
 import { createAsciiEngine, type AsciiEngine, type RenderMode } from '../../lib/ascii-engine';
 import './ascii-avatar.css';
 
-const MODES: RenderMode[] = ['ascii', 'pixel', 'dots'];
+const MODES: RenderMode[] = ['ascii', 'pixel', 'dots', 'dither'];
 
 interface Props {
   label: string;
