@@ -17,6 +17,8 @@ export interface SiteLink {
 
 export const site = {
   name: 'Karl Coding',
+  /** How the site owner is named, e.g. on their own comments. */
+  author: 'Karl',
   /** Drawn as the pixel wordmark in the footer (A–Z, 0–9). */
   wordmark: 'KARL',
   github: 'karllee830',

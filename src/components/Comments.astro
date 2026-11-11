@@ -39,8 +39,9 @@ const writeHref = thread
             <header class="head">
               <img class="avatar" src={`${c.avatar}&s=56`} width="28" height="28" alt="" loading="lazy" decoding="async" />
               <a class="author" href={c.authorUrl} rel="nofollow noopener">
-                {c.author}
+                {c.byOwner ? site.author : c.author}
               </a>
+              {c.byOwner && <span class="owner-badge sq">{t('post.commentsOwner')}</span>}
               <a class="date mono" href={c.url} rel="nofollow noopener">
                 <time datetime={c.createdAt.toISOString()}>{formatDate(c.createdAt)}</time>
               </a>
@@ -115,6 +116,18 @@ const writeHref = thread
     font-weight: var(--weight-medium);
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  /* Marks the blog author's own comments. */
+  .owner-badge {
+    --sq-r: 6px;
+    flex-shrink: 0;
+    padding: 2px 6px;
+    font-size: 11px;
+    line-height: 1;
+    font-weight: var(--weight-medium);
+    color: var(--color-accent-ink);
+    background-color: var(--color-accent-soft);
   }
 
   .date {

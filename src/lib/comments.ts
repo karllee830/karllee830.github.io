@@ -8,6 +8,8 @@ export interface PostComment {
   authorUrl: string;
   avatar: string;
   url: string;
+  /** Written by the repository owner, the blog's author. */
+  byOwner: boolean;
   /** Rendered and sanitised by GitHub. */
   html: string;
   createdAt: Date;
@@ -85,6 +87,7 @@ async function load(): Promise<Map<string, Thread>> {
                 authorUrl: c.user!.html_url,
                 avatar: c.user!.avatar_url,
                 url: c.html_url,
+                byOwner: c.user!.login.toLowerCase() === owner.toLowerCase(),
                 html: c.body_html ?? '',
                 createdAt: new Date(c.created_at),
               })),
