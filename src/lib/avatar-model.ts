@@ -7,6 +7,8 @@ export interface AvatarCell {
   tone: number;
   /** Pixel belongs to the accent hue (the blue cap band and sleeves). */
   accent: boolean;
+  /** Original colour of the pixel, as in the source artwork. */
+  color: string;
 }
 
 export interface AvatarModel {
@@ -90,7 +92,7 @@ export function buildAvatarModel(matrix: AvatarMatrix): AvatarModel {
       const accent = colors[index].accent;
       const r = (accent ? accentRank : neutralRank).get(index) ?? 0;
       const tone = accent ? 0.7 + 0.3 * r : 0.18 + 0.82 * r;
-      cells.push({ x, y, tone, accent });
+      cells.push({ x, y, tone, accent, color: matrix.palette[index] });
       x0 = Math.min(x0, x);
       y0 = Math.min(y0, y);
       x1 = Math.max(x1, x);

@@ -7,8 +7,13 @@ import { buildAvatarModel } from './avatar-model';
  * The canvas is a grid of 12×12 "units"; each avatar pixel maps to one
  * unit, drawn as two monospace glyphs (ASCII), a block (Pixel), a
  * halftone dot (Dots) or a 4×4 ordered-dither cell (Dither). Units outside
- * the figure form a quiet background in the same style, which lights up
- * around the pointer and on tap ripples.
+ * the figure form a quiet background in the same style.
+ *
+ * The pointer carries a lens that eases after it: figure pixels inside it
+ * show their original colours, with a pixel-dither dissolve at the rim.
+ * Around it the current mode's accent effect glows and fades outward
+ * (over empty background it fills the lens too), leaving a short trail.
+ * Taps send out a ripple.
  *
  * The loop only runs while something is moving, so an idle hero costs
  * nothing.
@@ -24,7 +29,13 @@ const HALF = UNIT / 2;
 const RAMP = ' .:-=+*#%@';
 const NOISE = '01<>/\\[]{}=+*#%@?!';
 const SCRAMBLE_MS = 120;
-const POINTER_RADIUS = 84;
+// Pointer lens: original pixels inside LENS_RADIUS, dissolving over LENS_EDGE;
+// the mode's accent effect fades out to RING_RADIUS.
+const LENS_RADIUS = 56;
+const LENS_EDGE = 24;
+const RING_RADIUS = 148;
+const LENS_FOLLOW = 0.72; // per-frame lag of the lens behind the pointer
+const LENS_GROW = 0.8; // per-frame easing of the lens radius
 const RIPPLE_SPEED = 0.4;
 const RIPPLE_WIDTH = 24;
 const RIPPLE_LIFE = 1400;
@@ -61,6 +72,9 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
   let halo = new Uint8Array(0);
   let seed = new Uint16Array(0);
   let heat = new Float32Array(0);
+  let reveal = new Float32Array(0);
+  let colorIndex = new Int16Array(0);
+  const palette: string[] = [];
   let switchAt = new Float64Array(0);
   let from = new Int8Array(0);
 
@@ -69,6 +83,7 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
   let font = '500 10px monospace';
 
   const pointer = { x: 0, y: 0, inside: false };
+  const lens = { x: 0, y: 0, r: 0 };
   let ripples: { x: number; y: number; t0: number }[] = [];
   let transitionEnd = 0;
 
@@ -113,6 +128,8 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
     halo = new Uint8Array(size);
     seed = new Uint16Array(size);
     heat = new Float32Array(size);
+    reveal = new Float32Array(size);
+    colorIndex = new Int16Array(size).fill(-1);
     switchAt = new Float64Array(size);
     from = new Int8Array(size).fill(mode);
     for (let i = 0; i < size; i++) seed[i] = (Math.random() * 65535) | 0;
@@ -129,6 +146,9 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
       const i = r * cols + c;
       tone[i] = cell.tone;
       accent[i] = cell.accent ? 1 : 0;
+      let k = palette.indexOf(cell.color);
+      if (k === -1) k = palette.push(cell.color) - 1;
+      colorIndex[i] = k;
       figureRowMin = Math.min(figureRowMin, r);
       figureRowMax = Math.max(figureRowMax, r);
     }
@@ -315,6 +335,32 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
     ctx!.fill();
   }
 
+  /** Unit-level ordered dither: the lens rim dissolves pixel by pixel. */
+  function revealed(i: number, c: number, r: number) {
+    return reveal[i] > 0 && reveal[i] > BAYER[(r & 3) * DITHER_CELLS + (c & 3)];
+  }
+
+  /**
+   * The original full-colour pixel. Edges that face empty space get a faint
+   * outline so pale pixels hold their silhouette on a light background.
+   */
+  function drawOriginal(c: number, r: number, x: number, y: number) {
+    const c2d = ctx!;
+    const i = r * cols + c;
+    c2d.globalAlpha = 1;
+    c2d.fillStyle = palette[colorIndex[i]];
+    c2d.fillRect(x, y, UNIT, UNIT);
+
+    const empty = (cc: number, rr: number) =>
+      cc < 0 || cc >= cols || rr < 0 || rr >= rows || tone[rr * cols + cc] < 0;
+    c2d.globalAlpha = 0.22;
+    c2d.fillStyle = colors.fg;
+    if (empty(c, r - 1)) c2d.fillRect(x, y, UNIT, 1);
+    if (empty(c, r + 1)) c2d.fillRect(x, y + UNIT - 1, UNIT, 1);
+    if (empty(c - 1, r)) c2d.fillRect(x, y, 1, UNIT);
+    if (empty(c + 1, r)) c2d.fillRect(x + UNIT - 1, y, 1, UNIT);
+  }
+
   function draw(now: number) {
     const c2d = ctx!;
     c2d.clearRect(0, 0, width, height);
@@ -334,6 +380,10 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
         const at = switchAt[i];
         // Figure units in Pixel mode sit on the same grid as the background.
         if (shownMode(i, now) === 1) drawGridCell(i);
+        if (revealed(i, c, r)) {
+          drawOriginal(c, r, x, y);
+          continue;
+        }
         if (now < at - SCRAMBLE_MS) {
           if (from[i] !== NONE) drawFigure(from[i], i, x, y, now);
         } else if (now < at) {
@@ -350,6 +400,11 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
   }
 
   function addHeat(px: number, py: number, radius: number, strength: (d: number) => number) {
+    addTo(heat, px, py, radius, strength);
+  }
+
+  /** Raises `target` around (px, py) to strength(distance), never lowering it. */
+  function addTo(target: Float32Array, px: number, py: number, radius: number, strength: (d: number) => number) {
     const c0 = Math.max(0, Math.floor((px - radius - originX) / UNIT));
     const c1 = Math.min(cols - 1, Math.ceil((px + radius - originX) / UNIT));
     const r0 = Math.max(0, Math.floor((py - radius - originY) / UNIT));
@@ -361,7 +416,7 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
         const v = strength(Math.hypot(cx - px, cy - py));
         if (v > 0) {
           const i = r * cols + c;
-          if (v > heat[i]) heat[i] = v;
+          if (v > target[i]) target[i] = v;
         }
       }
     }
@@ -381,11 +436,32 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
       else active = true;
     }
 
+    // The lens eases after the pointer, opens on enter and closes on leave.
+    const follow = 1 - Math.pow(LENS_FOLLOW, dt / 16.67);
+    const grow = 1 - Math.pow(LENS_GROW, dt / 16.67);
+    const targetR = pointer.inside ? LENS_RADIUS : 0;
     if (pointer.inside) {
+      if (lens.r < 1) {
+        lens.x = pointer.x;
+        lens.y = pointer.y;
+      }
+      lens.x += (pointer.x - lens.x) * follow;
+      lens.y += (pointer.y - lens.y) * follow;
+    }
+    lens.r += (targetR - lens.r) * grow;
+    if (Math.abs(targetR - lens.r) < 0.3) lens.r = targetR;
+
+    reveal.fill(0);
+    if (lens.r > 0.5) {
       active = true;
-      addHeat(pointer.x, pointer.y, POINTER_RADIUS, (d) =>
-        d < POINTER_RADIUS ? (1 - d / POINTER_RADIUS) ** 1.6 : 0,
+      // 1 inside the rim, falling to 0 across LENS_EDGE (dithered when drawn).
+      addTo(reveal, lens.x, lens.y, lens.r + LENS_EDGE / 2, (d) =>
+        Math.min(1, Math.max(0, (lens.r + LENS_EDGE / 2 - d) / LENS_EDGE)),
       );
+      // Accent effect: strongest at the centre (shows over empty background),
+      // fading outward; scaled by how open the lens is.
+      const strength = lens.r / LENS_RADIUS;
+      addHeat(lens.x, lens.y, RING_RADIUS, (d) => (d < RING_RADIUS ? strength * (1 - d / RING_RADIUS) ** 1.4 : 0));
     }
 
     ripples = ripples.filter((ripple) => now - ripple.t0 < RIPPLE_LIFE);
