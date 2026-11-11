@@ -55,7 +55,7 @@ export const site = {
       // The greeting is English on both locales.
       hello: "Hello, I'm Karl :)",
       prefix: '写代码，也做些',
-      words: ['小工具', '小网页', '像素画', '小实验'],
+      words: ['AI', '小工具', 'MCP', '网页', '小软件', '开源'],
       suffix: '。',
       // One line each, shown with a block marker in front.
       bio: ['不定期搓一些小而快，并且带一点点乐趣的东西。', '这里放我写的文章、做过的东西和常去的链接。'],
@@ -63,7 +63,7 @@ export const site = {
     en: {
       hello: "Hello, I'm Karl :)",
       prefix: 'I write code and make ',
-      words: ['small tools', 'tiny websites', 'pixel art', 'little experiments'],
+      words: ['AI', 'small tools', 'MCP', 'websites', 'little apps', 'open source'],
       suffix: '.',
       bio: [
         'Every now and then I hack together small, quick things with a little fun in them.',
