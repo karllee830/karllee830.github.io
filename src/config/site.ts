@@ -35,7 +35,7 @@ export const site = {
   wordmark: 'KARL',
   github: 'karllee830',
   /** Repository that hosts this site. */
-  repo: 'karllee830/HomePageTry4',
+  repo: 'karllee830/karllee830.github.io',
 
   /**
    * Reviewed comments from GitHub Issues: one issue per post, titled "blog/<slug>" and
@@ -43,7 +43,7 @@ export const site = {
    */
   comments: {
     enabled: true,
-    repo: 'karllee830/HomePageTry4',
+    repo: 'karllee830/karllee830.github.io',
     label: 'comment',
   },
 

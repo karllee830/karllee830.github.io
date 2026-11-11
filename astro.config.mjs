@@ -8,7 +8,7 @@ import { codeBlocks } from './src/lib/markdown/code-blocks.mjs';
 
 // GitHub Actions passes these in (see .github/workflows/deploy.yml).
 // For a user site (<name>.github.io) BASE_PATH is empty.
-const site = process.env.SITE_URL || 'https://karllee830.github.io';
+const site = process.env.SITE_URL || 'https://www.leekarl.com';
 const base = process.env.BASE_PATH || '/';
 
 /** @param {string} file */
