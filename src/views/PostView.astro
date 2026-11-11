@@ -35,7 +35,10 @@ const otherHrefs = Object.fromEntries(versions.filter((l) => l !== lang).map((l)
 
 const outline: OutlineItem[] = [
   { id: 'post-title', text: t('outline.intro'), depth: 2 },
-  ...headings.filter((h) => h.depth === 2 || h.depth === 3).map((h) => ({ id: h.slug, text: h.text, depth: h.depth })),
+  // The footnotes' heading is generated and visually hidden, so it stays out of the outline.
+  ...headings
+    .filter((h) => (h.depth === 2 || h.depth === 3) && h.slug !== 'footnote-label')
+    .map((h) => ({ id: h.slug, text: h.text, depth: h.depth })),
   ...(site.comments.enabled ? [{ id: 'comments-title', text: t('post.comments'), depth: 2 }] : []),
 ];
 
