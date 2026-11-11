@@ -71,12 +71,13 @@ const ogImage = new URL(avatarUrl, Astro.site);
         } catch (e) {}
         var dark = pref === 'dark' || (pref !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
         document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+        document.documentElement.dataset.themePref = pref === 'light' || pref === 'dark' ? pref : 'system';
         if (dark) document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0a0a0a');
       })();
     </script>
 
-    <Font cssVariable="--font-geist" preload />
-    <Font cssVariable="--font-geist-mono" />
+    <Font cssVariable="--font-display" preload />
+    <Font cssVariable="--font-code" />
   </head>
   <body>
     <a class="skip-link" href="#main">{t('skip')}</a>

@@ -1,6 +1,7 @@
 ---
 import { formatDate, formatMonthDay, postHref, type Post } from '../lib/posts';
 import type { Lang } from '../i18n/ui';
+import Icon from './Icon.astro';
 
 interface Props {
   posts: Post[];
@@ -25,6 +26,7 @@ const tag = { zh: '中文', en: 'EN' } as const;
             <time class="mono" datetime={post.data.date.toISOString()}>
               {short ? formatMonthDay(post.data.date) : formatDate(post.data.date)}
             </time>
+            <Icon name="arrow-right" size={14} class="row-arrow" />
           </span>
         </a>
       </li>
@@ -48,8 +50,46 @@ const tag = { zh: '中文', en: 'EN' } as const;
     transition: background-color var(--duration-fast) var(--ease-out);
   }
 
+  .row {
+    transition:
+      background-color var(--duration-fast) var(--ease-out),
+      transform var(--duration-fast) var(--ease-out);
+  }
+
   .row:hover {
     background-color: var(--color-hover);
+  }
+
+  .row:active {
+    background-color: var(--color-line);
+    transform: scale(0.995);
+  }
+
+  /* The arrow slides in and pushes the date left. */
+  .meta :global(.row-arrow) {
+    align-self: center;
+    width: 0;
+    margin-left: calc(-1 * var(--space-2));
+    opacity: 0;
+    color: var(--color-fg);
+    transform: translateX(-4px);
+    transition:
+      width var(--duration-base) var(--ease-out),
+      margin var(--duration-base) var(--ease-out),
+      opacity var(--duration-fast) var(--ease-out),
+      transform var(--duration-base) var(--ease-out);
+  }
+
+  .row:hover :global(.row-arrow),
+  .row:focus-visible :global(.row-arrow) {
+    width: 14px;
+    margin-left: 0;
+    opacity: 1;
+    transform: none;
+  }
+
+  .row:hover .meta {
+    color: var(--color-fg-muted);
   }
 
   .title {
@@ -62,6 +102,7 @@ const tag = { zh: '中文', en: 'EN' } as const;
     gap: var(--space-2);
     flex-shrink: 0;
     color: var(--color-fg-subtle);
+    transition: color var(--duration-fast) var(--ease-out);
   }
 
   .lang-tag {

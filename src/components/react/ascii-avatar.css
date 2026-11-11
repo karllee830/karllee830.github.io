@@ -33,8 +33,27 @@
 }
 
 .ascii-modes {
+  position: relative;
   display: flex;
   gap: var(--space-1);
+}
+
+.ascii-thumb {
+  --sq-r: calc(var(--hero-radius) - var(--hero-padding));
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: var(--control-md);
+  background-color: var(--color-fg);
+  opacity: 0;
+  transition:
+    transform var(--duration-slow) var(--ease-out),
+    width var(--duration-slow) var(--ease-out);
+  pointer-events: none;
+}
+
+.ascii-modes[data-ready] .ascii-thumb {
+  opacity: 1;
 }
 
 /* Bar controls are 32px tall: radius 16 = hero radius − padding. */
@@ -48,7 +67,8 @@
   font-weight: var(--weight-medium);
   color: var(--color-fg-muted);
   transition:
-    color var(--duration-fast) var(--ease-out),
+    color var(--duration-base) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out),
     --sq-bg var(--duration-fast) var(--ease-out),
     --sq-border var(--duration-fast) var(--ease-out);
 }
@@ -63,10 +83,24 @@
   color: var(--color-fg);
 }
 
+.ascii-chip {
+  position: relative;
+  z-index: 1;
+}
+
+.ascii-chip:active,
+.ascii-replay:active {
+  transform: scale(0.94);
+}
+
 .ascii-chip[aria-checked="true"] {
-  --sq-bg: var(--color-fg);
-  --sq-border: var(--color-fg);
+  --sq-bg: transparent;
   color: var(--color-on-fg);
+}
+
+/* Before hydration there is no thumb; paint the chip itself. */
+.ascii-modes:not([data-ready]) .ascii-chip[aria-checked="true"] {
+  --sq-bg: var(--color-fg);
 }
 
 .ascii-replay {
@@ -84,8 +118,12 @@
   transition: transform var(--duration-slow) var(--ease-out);
 }
 
+.ascii-replay:hover svg {
+  transform: rotate(-45deg);
+}
+
 .ascii-replay:active svg {
-  transform: rotate(-120deg);
+  transform: rotate(-200deg);
 }
 
 @media (max-width: 767px) {

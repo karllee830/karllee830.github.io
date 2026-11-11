@@ -34,8 +34,8 @@ const minutes = readingMinutes(post.body);
 >
   <article class="post">
     <header class="post-header">
-      <a class="back" href={localePath(lang, '/blog/')}>
-        <Icon name="arrow-left" size={14} />
+      <a class="back pill-link sq" href={localePath(lang, '/blog/')}>
+        <Icon name="arrow-left" size={14} nudge="left" />
         {t('post.back')}
       </a>
       <h1>{title}</h1>
@@ -110,25 +110,8 @@ const minutes = readingMinutes(post.body);
   }
 
   .back {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-1);
     justify-self: start;
     margin-bottom: var(--space-4);
-    color: var(--color-fg-muted);
-    transition: color var(--duration-fast) var(--ease-out);
-  }
-
-  .back :global(svg) {
-    transition: transform var(--duration-base) var(--ease-out);
-  }
-
-  .back:hover {
-    color: var(--color-fg);
-  }
-
-  .back:hover :global(svg) {
-    transform: translateX(-2px);
   }
 
   h1 {
@@ -180,9 +163,20 @@ const minutes = readingMinutes(post.body);
     padding: var(--space-3) var(--space-4);
   }
 
+  .pager-card {
+    transition:
+      --sq-bg var(--duration-fast) var(--ease-out),
+      --sq-border var(--duration-fast) var(--ease-out),
+      transform var(--duration-fast) var(--ease-out);
+  }
+
   .pager-card:hover {
     --sq-bg: var(--color-hover);
     --sq-border: var(--color-line-strong);
+  }
+
+  .pager-card:active {
+    transform: scale(0.99);
   }
 
   .pager-card.next {

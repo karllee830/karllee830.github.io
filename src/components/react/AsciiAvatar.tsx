@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { createAsciiEngine, type AsciiEngine, type RenderMode } from '../../lib/ascii-engine';
 import './ascii-avatar.css';
 
@@ -16,6 +16,8 @@ export default function AsciiAvatar({ label, modesLabel, replayLabel, modeLabels
   const engineRef = useRef<AsciiEngine | null>(null);
   const chipRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const [mode, setMode] = useState<RenderMode>('ascii');
+  const modesRef = useRef<HTMLDivElement>(null);
+  const [thumb, setThumb] = useState<CSSProperties | null>(null);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -26,6 +28,21 @@ export default function AsciiAvatar({ label, modesLabel, replayLabel, modeLabels
 
   useEffect(() => {
     engineRef.current?.setMode(mode);
+  }, [mode]);
+
+  // The active chip's background is one thumb that slides between options.
+  useLayoutEffect(() => {
+    const group = modesRef.current;
+    if (!group) return;
+    const place = () => {
+      const chip = chipRefs.current[MODES.indexOf(mode)];
+      if (!chip) return;
+      setThumb({ width: chip.offsetWidth, transform: `translateX(${chip.offsetLeft}px)` });
+    };
+    place();
+    const observer = new ResizeObserver(place);
+    observer.observe(group);
+    return () => observer.disconnect();
   }, [mode]);
 
   // Arrow keys move between options, as in a native radio group.
@@ -44,7 +61,15 @@ export default function AsciiAvatar({ label, modesLabel, replayLabel, modeLabels
         <canvas ref={canvasRef} className="ascii-canvas" role="img" aria-label={label} />
       </div>
       <div className="ascii-bar">
-        <div className="ascii-modes" role="radiogroup" aria-label={modesLabel} onKeyDown={onKeyDown}>
+        <div
+          ref={modesRef}
+          className="ascii-modes"
+          role="radiogroup"
+          aria-label={modesLabel}
+          onKeyDown={onKeyDown}
+          data-ready={thumb ? '' : undefined}
+        >
+          <span className="ascii-thumb sq" style={thumb ?? undefined} aria-hidden="true" />
           {MODES.map((m, index) => (
             <button
               key={m}

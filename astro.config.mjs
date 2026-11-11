@@ -9,33 +9,42 @@ const site = process.env.SITE_URL || 'https://karllee830.github.io';
 const base = process.env.BASE_PATH || '/';
 
 /** @param {string} file */
-const geist = (file) => `./node_modules/@fontsource-variable/${file}`;
+const fontFile = (file) => `./node_modules/@fontsource-variable/${file}`;
 
 export default defineConfig({
   site,
   base,
   integrations: [react(), sitemap()],
   prefetch: { defaultStrategy: 'hover' },
+  // Google Sans Flex + Google Sans Code (SIL Open Font License), self-hosted.
   fonts: [
     {
       provider: fontProviders.local(),
-      name: 'Geist',
-      cssVariable: '--font-geist',
+      name: 'Google Sans Flex',
+      cssVariable: '--font-display',
       fallbacks: ['sans-serif'],
       options: {
         variants: [
-          { weight: '100 900', style: 'normal', src: [geist('geist/files/geist-latin-wght-normal.woff2')] },
+          {
+            weight: '1 1000',
+            style: 'normal',
+            src: [fontFile('google-sans-flex/files/google-sans-flex-latin-wght-normal.woff2')],
+          },
         ],
       },
     },
     {
       provider: fontProviders.local(),
-      name: 'Geist Mono',
-      cssVariable: '--font-geist-mono',
+      name: 'Google Sans Code',
+      cssVariable: '--font-code',
       fallbacks: ['monospace'],
       options: {
         variants: [
-          { weight: '100 900', style: 'normal', src: [geist('geist-mono/files/geist-mono-latin-wght-normal.woff2')] },
+          {
+            weight: '300 800',
+            style: 'normal',
+            src: [fontFile('google-sans-code/files/google-sans-code-latin-wght-normal.woff2')],
+          },
         ],
       },
     },

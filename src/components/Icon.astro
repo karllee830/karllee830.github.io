@@ -4,6 +4,8 @@ interface Props {
   name: keyof typeof icons;
   size?: number;
   class?: string;
+  /** Direction the icon shifts when its `.pill-link` parent is hovered. */
+  nudge?: 'left' | 'right' | 'up-right';
 }
 
 const icons = {
@@ -23,7 +25,7 @@ const icons = {
   message: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
 };
 
-const { name, size = 16, class: className } = Astro.props;
+const { name, size = 16, class: className, nudge } = Astro.props;
 ---
 
 <svg
@@ -37,5 +39,6 @@ const { name, size = 16, class: className } = Astro.props;
   stroke-linecap="round"
   stroke-linejoin="round"
   aria-hidden="true"
+  data-nudge={nudge}
   set:html={icons[name]}
 />

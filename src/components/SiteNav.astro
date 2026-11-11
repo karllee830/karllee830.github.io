@@ -24,7 +24,7 @@ const items = [
 ---
 
 <header class="site-nav">
-  <a class="brand" href={home} aria-label={site.name}>
+  <a class="brand sq" href={home} aria-label={site.name}>
     <span class="brand-mark sq"><MiniAvatar size={20} /></span>
     <span class="brand-name">{site.name}</span>
   </a>
@@ -34,8 +34,9 @@ const items = [
       {
         items.map((item) => (
           <li class={`nav-item nav-item--${item.key}`}>
-            <a href={item.href} aria-current={item.current ? 'page' : undefined}>
-              {item.label}
+            <a class="nav-link sq" href={item.href} aria-current={item.current ? 'page' : undefined}>
+              <span>{item.label}</span>
+              <span class="marker" aria-hidden="true" />
             </a>
           </li>
         ))
@@ -56,7 +57,7 @@ const items = [
     z-index: 10;
     display: flex;
     align-items: center;
-    gap: var(--space-4);
+    gap: var(--space-3);
     height: var(--topbar-height);
     padding-inline: var(--page-gutter);
     background-color: color-mix(in srgb, var(--color-bg) 88%, transparent);
@@ -65,23 +66,40 @@ const items = [
     border-bottom: 1px solid var(--color-line);
   }
 
+  /* Rows are 32px; hover pills bleed 8px so text stays on the grid. */
   .brand {
+    --sq-r: var(--radius-3);
     display: inline-flex;
     align-items: center;
     gap: var(--space-2);
     min-width: 0;
+    height: var(--control-md);
+    padding: var(--space-1) var(--space-2) var(--space-1) var(--space-1);
+    margin-left: calc(-1 * var(--space-1));
     font-weight: var(--weight-semibold);
+    transition: background-color var(--duration-fast) var(--ease-out);
   }
 
+  .brand:hover {
+    background-color: var(--color-hover);
+  }
+
+  /* Brand mark: 24px box, radius 8 = brand radius 12 − 4px padding. */
   .brand-mark {
-    --sq-r: var(--radius-2);
+    --sq-r: calc(var(--radius-3) - var(--space-1));
     display: grid;
     place-items: center;
+    flex-shrink: 0;
     width: var(--control-sm);
     height: var(--control-sm);
     color: var(--color-fg);
     background-color: var(--color-surface-2);
     overflow: hidden;
+    transition: background-color var(--duration-fast) var(--ease-out);
+  }
+
+  .brand:hover .brand-mark {
+    background-color: var(--color-surface);
   }
 
   .brand-mark :global(svg) {
@@ -90,23 +108,74 @@ const items = [
     margin-top: 4px;
   }
 
+  .brand:hover .brand-mark :global(svg) {
+    animation: hop 420ms var(--ease-out);
+  }
+
+  @keyframes hop {
+    35% {
+      transform: translateY(-3px);
+    }
+    70% {
+      transform: translateY(1px);
+    }
+  }
+
+  .brand-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .nav-links {
     margin-left: auto;
   }
 
   .nav-links ul {
     display: flex;
-    gap: var(--space-4);
+    gap: var(--space-1);
   }
 
-  .nav-links a {
+  .nav-link {
+    --sq-r: var(--radius-2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    height: var(--control-md);
+    padding-inline: var(--space-2);
     color: var(--color-fg-muted);
-    transition: color var(--duration-fast) var(--ease-out);
+    transition:
+      color var(--duration-fast) var(--ease-out),
+      background-color var(--duration-fast) var(--ease-out);
   }
 
-  .nav-links a:hover,
-  .nav-links a[aria-current] {
+  .nav-link:hover {
     color: var(--color-fg);
+    background-color: var(--color-hover);
+  }
+
+  .nav-link:active {
+    background-color: var(--color-line);
+  }
+
+  .nav-link[aria-current] {
+    color: var(--color-fg);
+    font-weight: var(--weight-medium);
+  }
+
+  /* One accent pixel marks the current section. */
+  .marker {
+    display: none;
+    width: 4px;
+    height: 4px;
+    background-color: var(--color-accent);
+    transform: scale(0);
+    transition: transform var(--duration-base) var(--ease-out);
+  }
+
+  .nav-link[aria-current] .marker {
+    transform: scale(1);
   }
 
   .nav-item--home,
@@ -128,11 +197,9 @@ const items = [
   /* Desktop: sticky sidebar */
   @media (min-width: 1024px) {
     .site-nav {
-      position: sticky;
-      top: 0;
       flex-direction: column;
       align-items: stretch;
-      gap: var(--space-8);
+      gap: var(--space-6);
       height: 100dvh;
       max-height: 100dvh;
       padding: var(--space-12) 0;
@@ -142,13 +209,18 @@ const items = [
       border-bottom: 0;
     }
 
+    .brand {
+      align-self: flex-start;
+      margin-left: calc(-1 * var(--space-1));
+    }
+
     .nav-links {
-      margin-left: 0;
+      margin: 0 calc(-1 * var(--space-2));
     }
 
     .nav-links ul {
       flex-direction: column;
-      gap: var(--space-2);
+      gap: 2px;
     }
 
     .nav-item--home,
@@ -156,9 +228,14 @@ const items = [
       display: list-item;
     }
 
+    .marker {
+      display: block;
+    }
+
     .nav-tools {
       flex-direction: column;
       align-items: flex-start;
+      gap: var(--space-2);
       margin-top: auto;
     }
   }

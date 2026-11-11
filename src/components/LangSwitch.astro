@@ -15,7 +15,8 @@ const options = [
 ] as const;
 ---
 
-<nav class="segmented sq sq-line" aria-label={t('lang.label')}>
+<nav class="segmented sq sq-line" aria-label={t('lang.label')} style={`--seg-index:${options.findIndex((o) => o.value === lang)}`} data-lang-switch>
+  <span class="segment-thumb sq" aria-hidden="true"></span>
   {
     options.map((o) => (
       <a
@@ -31,3 +32,12 @@ const options = [
     ))
   }
 </nav>
+
+<script>
+  // Slide the thumb toward the chosen language while the next page loads.
+  document.querySelectorAll<HTMLElement>('[data-lang-switch]').forEach((group) => {
+    group.querySelectorAll<HTMLAnchorElement>('a').forEach((link, index) => {
+      link.addEventListener('click', () => group.style.setProperty('--seg-index', String(index)));
+    });
+  });
+</script>

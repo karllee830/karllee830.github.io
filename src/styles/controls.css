@@ -1,41 +1,131 @@
 /*
- * Segmented control: 32px tall, 4px padding, outer radius 12
- * → segments are 24px tall with radius 8 (12 − 4).
+ * Segmented control: 32px tall, 4px inset, outer radius 12
+ * → segments and the sliding thumb are 24px tall with radius 8 (12 − 4).
+ * Set --seg-index on the group to move the thumb.
  */
 .segmented {
   --segmented-radius: var(--radius-3);
-  --segmented-padding: var(--space-1);
+  --segmented-inset: var(--space-1);
+  --segment-width: 28px;
+  --segment-gap: 2px;
   --sq-r: var(--segmented-radius);
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: var(--segment-gap);
   height: var(--control-md);
-  padding: calc(var(--segmented-padding) - 1px);
+  /* 1px border + 3px padding = 4px inset */
+  padding: calc(var(--segmented-inset) - 1px);
+}
+
+.segmented:hover {
+  --sq-border: var(--color-line-strong);
+}
+
+.segment-thumb {
+  --sq-r: calc(var(--segmented-radius) - var(--segmented-inset));
+  position: absolute;
+  top: calc(var(--segmented-inset) - 1px);
+  left: calc(var(--segmented-inset) - 1px);
+  z-index: 0;
+  width: var(--segment-width);
+  height: var(--control-sm);
+  background-color: var(--color-line);
+  transform: translateX(calc(var(--seg-index, 0) * (var(--segment-width) + var(--segment-gap))));
+  transition: transform var(--duration-slow) var(--ease-out);
+  pointer-events: none;
 }
 
 .segment {
-  --sq-r: calc(var(--segmented-radius) - var(--segmented-padding));
+  --sq-r: calc(var(--segmented-radius) - var(--segmented-inset));
+  position: relative;
+  z-index: 1;
   display: inline-grid;
   place-items: center;
-  min-width: var(--control-sm);
+  width: var(--segment-width);
   height: var(--control-sm);
-  padding-inline: var(--space-1);
   font-size: var(--text-caption);
   line-height: var(--leading-caption);
   font-weight: var(--weight-medium);
   color: var(--color-fg-subtle);
-  background-color: transparent;
   transition:
     color var(--duration-fast) var(--ease-out),
-    background-color var(--duration-fast) var(--ease-out);
+    background-color var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
 }
 
 .segment:hover {
   color: var(--color-fg);
+  background-color: var(--color-hover);
 }
 
 .segment[aria-pressed="true"],
 .segment[aria-current] {
   color: var(--color-fg);
+  background-color: transparent;
+}
+
+.segment:active {
+  transform: scale(0.92);
+}
+
+.segment svg {
+  transition: transform var(--duration-slow) var(--ease-out);
+}
+
+/* Icons turn a little when chosen. */
+.segment[data-value="light"][aria-pressed="true"] svg {
+  transform: rotate(90deg);
+}
+
+.segment[data-value="dark"][aria-pressed="true"] svg {
+  transform: rotate(-24deg);
+}
+
+/* Theme thumb follows the stored preference, set before first paint. */
+:root[data-theme-pref="light"] [data-theme-switch] {
+  --seg-index: 1;
+}
+
+:root[data-theme-pref="dark"] [data-theme-switch] {
+  --seg-index: 2;
+}
+
+/* Text pill used for small inline links (more, back, footer). */
+.pill-link {
+  --sq-r: var(--radius-2);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 28px;
+  padding-inline: var(--space-2);
+  margin-inline: calc(-1 * var(--space-2));
+  color: var(--color-fg-muted);
+  transition:
+    color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out);
+}
+
+.pill-link:hover {
+  color: var(--color-fg);
   background-color: var(--color-hover);
+}
+
+.pill-link:active {
+  background-color: var(--color-line);
+}
+
+.pill-link svg {
+  transition: transform var(--duration-base) var(--ease-out);
+}
+
+.pill-link:hover [data-nudge="right"] {
+  transform: translateX(2px);
+}
+
+.pill-link:hover [data-nudge="left"] {
+  transform: translateX(-2px);
+}
+
+.pill-link:hover [data-nudge="up-right"] {
+  transform: translate(2px, -2px);
 }

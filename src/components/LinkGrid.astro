@@ -56,9 +56,20 @@ const links = site.links.map((link) => ({
     padding-right: var(--space-4);
   }
 
+  .card {
+    transition:
+      --sq-bg var(--duration-fast) var(--ease-out),
+      --sq-border var(--duration-fast) var(--ease-out),
+      transform var(--duration-fast) var(--ease-out);
+  }
+
   .card:hover {
     --sq-bg: var(--color-hover);
     --sq-border: var(--color-line-strong);
+  }
+
+  .card:active {
+    transform: scale(0.985);
   }
 
   .icon-box {
@@ -70,6 +81,23 @@ const links = site.links.map((link) => ({
     height: var(--control-lg);
     background-color: var(--color-surface-2);
     color: var(--color-fg);
+    transition:
+      background-color var(--duration-fast) var(--ease-out),
+      color var(--duration-fast) var(--ease-out);
+  }
+
+  .icon-box :global(svg) {
+    transition: transform var(--duration-slow) var(--ease-out);
+  }
+
+  /* Icon box inverts and the glyph tilts on hover. */
+  .card:hover .icon-box {
+    background-color: var(--color-fg);
+    color: var(--color-on-fg);
+  }
+
+  .card:hover .icon-box :global(svg) {
+    transform: rotate(-8deg) scale(1.08);
   }
 
   .text {

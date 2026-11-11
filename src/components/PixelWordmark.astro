@@ -6,6 +6,10 @@ interface Props {
   /** Fraction of the glyph height left visible (the rest is cropped). */
   crop?: number;
   label?: string;
+  /** Cells per font pixel along each axis; 2 splits every pixel into 2×2. */
+  density?: number;
+  /** Let a self-driving snake roam the grid, eating lit pixels. */
+  snake?: boolean;
 }
 
 const FONT: Record<string, string> = {
@@ -49,30 +53,47 @@ const FONT: Record<string, string> = {
   ' ': '00000 00000 00000 00000 00000 00000 00000',
 };
 
-const { text, crop = 0.93, label } = Astro.props;
-const CELL = 10;
-const GAP = 1;
+const { text, crop = 0.93, label, density = 2, snake = true } = Astro.props;
+const PIXEL = 10;
+const CELL = PIXEL / density;
+const GAP = CELL / 10;
 const glyphs = [...text.toUpperCase()].map((ch) => (FONT[ch] ?? FONT[' ']).split(' '));
-const columns = glyphs.length * 5 + Math.max(0, glyphs.length - 1);
+const columns = (glyphs.length * 5 + Math.max(0, glyphs.length - 1)) * density;
+const rowsCount = 7 * density;
 const width = columns * CELL - GAP;
-const height = 7 * CELL - GAP;
+const height = rowsCount * CELL - GAP;
 const visibleHeight = Math.round(height * crop);
+// The snake stays on rows that are fully visible above the crop.
+const snakeRows = Math.floor((rowsCount * CELL * crop) / CELL);
 
+// Each font pixel (and each spacer column) becomes density × density cells.
 const cells: { x: number; y: number; on: boolean }[] = [];
 glyphs.forEach((rows, g) => {
-  const offset = g * 6;
+  const span = g < glyphs.length - 1 ? 6 : 5;
   for (let y = 0; y < 7; y++) {
-    for (let x = 0; x < 5; x++) cells.push({ x: offset + x, y, on: rows[y][x] === '1' });
-    if (g < glyphs.length - 1) cells.push({ x: offset + 5, y, on: false });
+    for (let x = 0; x < span; x++) {
+      const on = x < 5 && rows[y][x] === '1';
+      for (let sy = 0; sy < density; sy++) {
+        for (let sx = 0; sx < density; sx++) {
+          cells.push({ x: (g * 6 + x) * density + sx, y: y * density + sy, on });
+        }
+      }
+    }
   }
 });
 ---
 
-<div class="wordmark" style={`aspect-ratio:${width}/${visibleHeight}`}>
+<div
+  class="wordmark"
+  style={`aspect-ratio:${width}/${visibleHeight}`}
+  data-snake={snake ? '' : undefined}
+  data-cols={columns}
+  data-rows={snakeRows}
+>
   <svg viewBox={`0 0 ${width} ${height}`} role={label ? 'img' : undefined} aria-label={label} aria-hidden={label ? undefined : 'true'}>
     {
       cells.map((c) => (
-        <rect class={c.on ? 'on' : 'off'} x={c.x * CELL} y={c.y * CELL} width={CELL - GAP} height={CELL - GAP} />
+        <rect class={c.on ? 'on' : 'off'} data-i={c.y * columns + c.x} x={c.x * CELL} y={c.y * CELL} width={CELL - GAP} height={CELL - GAP} />
       ))
     }
   </svg>
@@ -111,4 +132,171 @@ glyphs.forEach((rows, g) => {
   .off:hover {
     fill: var(--color-accent-soft);
   }
+
+  /* Snake: body lights up instantly; the tail fades through the 1.6s transition. */
+  .snake {
+    fill: var(--color-accent);
+    fill-opacity: 0.55;
+    transition-duration: 0s;
+  }
+
+  .snake-head {
+    fill: var(--color-accent);
+    fill-opacity: 1;
+    transition-duration: 0s;
+  }
+
+  .food {
+    fill: var(--color-fg);
+    animation: blink 640ms steps(2, jump-none) infinite;
+    transition-duration: 0s;
+  }
+
+  @keyframes blink {
+    50% {
+      fill-opacity: 0.2;
+    }
+  }
 </style>
+
+<script>
+  /**
+   * A self-driving snake on the wordmark grid. It picks a lit pixel as food,
+   * finds a path with BFS around its own body, eats it and grows a little.
+   * Runs only while the footer is on screen; off for reduced motion.
+   */
+  const TICK = 90;
+  const MIN_LENGTH = 6;
+  const MAX_LENGTH = 18;
+
+  function start(root: HTMLElement) {
+    const cols = Number(root.dataset.cols);
+    const rows = Number(root.dataset.rows);
+    if (!cols || !rows) return;
+
+    const rects: SVGRectElement[] = [];
+    root.querySelectorAll<SVGRectElement>('rect[data-i]').forEach((rect) => {
+      rects[Number(rect.dataset.i)] = rect;
+    });
+    const lit = rects
+      .map((rect, i) => (rect.classList.contains('on') && Math.floor(i / cols) < rows ? i : -1))
+      .filter((i) => i >= 0);
+    if (!lit.length) return;
+
+    const neighbours = (i: number) => {
+      const x = i % cols;
+      const y = Math.floor(i / cols);
+      const out: number[] = [];
+      if (x > 0) out.push(i - 1);
+      if (x < cols - 1) out.push(i + 1);
+      if (y > 0) out.push(i - cols);
+      if (y < rows - 1) out.push(i + cols);
+      return out;
+    };
+
+    let body: number[] = [Math.floor(rows / 2) * cols];
+    let length = MIN_LENGTH;
+    let food = -1;
+    let path: number[] = [];
+    let timer = 0;
+    let running = false;
+
+    const occupied = () => new Set(body);
+
+    const placeFood = () => {
+      const taken = occupied();
+      const free = lit.filter((i) => !taken.has(i));
+      food = free[Math.floor(Math.random() * free.length)] ?? -1;
+      if (food >= 0) rects[food].classList.add('food');
+    };
+
+    // Shortest path from the head to the food, treating the body as walls.
+    const findPath = () => {
+      const blocked = occupied();
+      const head = body[0];
+      const prev = new Map<number, number>([[head, -1]]);
+      const queue = [head];
+      while (queue.length) {
+        const current = queue.shift()!;
+        if (current === food) break;
+        for (const next of neighbours(current)) {
+          if (prev.has(next) || (blocked.has(next) && next !== food)) continue;
+          prev.set(next, current);
+          queue.push(next);
+        }
+      }
+      if (!prev.has(food)) return [];
+      const steps: number[] = [];
+      for (let at = food; at !== head; at = prev.get(at)!) steps.unshift(at);
+      return steps;
+    };
+
+    const paint = () => {
+      body.forEach((i, index) => {
+        rects[i].classList.toggle('snake-head', index === 0);
+        rects[i].classList.toggle('snake', index !== 0);
+      });
+    };
+
+    const step = () => {
+      if (food < 0) placeFood();
+      if (!path.length) path = findPath();
+
+      let next = path.shift();
+      if (next === undefined) {
+        // Boxed in or no route: wander to any free neighbour.
+        const taken = occupied();
+        const options = neighbours(body[0]).filter((n) => !taken.has(n));
+        next = options[Math.floor(Math.random() * options.length)];
+        if (next === undefined) {
+          reset();
+          return;
+        }
+      }
+
+      body.unshift(next);
+      if (next === food) {
+        rects[food].classList.remove('food');
+        food = -1;
+        path = [];
+        length = length >= MAX_LENGTH ? MIN_LENGTH : length + 2;
+      }
+      while (body.length > length) {
+        const tail = body.pop()!;
+        rects[tail].classList.remove('snake', 'snake-head');
+      }
+      paint();
+    };
+
+    const reset = () => {
+      body.forEach((i) => rects[i].classList.remove('snake', 'snake-head'));
+      body = [lit[Math.floor(Math.random() * lit.length)]];
+      length = MIN_LENGTH;
+      path = [];
+    };
+
+    const loop = () => {
+      step();
+      timer = window.setTimeout(loop, TICK);
+    };
+
+    const setRunning = (next: boolean) => {
+      if (next === running) return;
+      running = next;
+      window.clearTimeout(timer);
+      if (running) loop();
+    };
+
+    let onScreen = false;
+    const update = () => setRunning(onScreen && document.visibilityState === 'visible');
+    new IntersectionObserver(([entry]) => {
+      onScreen = entry.isIntersecting;
+      update();
+    }).observe(root);
+    document.addEventListener('visibilitychange', update);
+  }
+
+  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    document.querySelectorAll<HTMLElement>('.wordmark[data-snake]').forEach(start);
+  }
+</script>

@@ -64,7 +64,7 @@ The avatar must be a pixel-art SVG built from `<rect>` elements with a `viewBox`
 ## Performance
 
 - Static HTML; JavaScript only for the hero islands on the home page and a ~2 KB script for theme and corners elsewhere.
-- Latin subsets of Geist and Geist Mono are self-hosted with metric-matched fallbacks; Chinese text uses system fonts.
+- Latin subsets of Google Sans Flex and Google Sans Code (SIL Open Font License) are self-hosted with metric-matched fallbacks; Chinese text uses system fonts.
 - Post images are converted to WebP with responsive sizes at build time.
 - Comments load only when scrolled near.
 

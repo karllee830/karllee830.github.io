@@ -16,6 +16,7 @@
   --space-8: 32px;
   --space-10: 40px;
   --space-12: 48px;
+  --space-14: 56px;
   --space-16: 64px;
   --space-20: 80px;
   --space-24: 96px;
@@ -35,8 +36,8 @@
   --control-lg: 40px;
 
   /* Typography */
-  --font-sans: var(--font-geist), "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-sans: var(--font-display), "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  --font-mono: var(--font-code), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
   --text-caption: 12px;
   --leading-caption: 16px;
@@ -53,9 +54,9 @@
   --text-headline: 28px;
   --leading-headline: 36px;
 
-  --weight-regular: 450;
+  --weight-regular: 420;
   --weight-medium: 520;
-  --weight-semibold: 600;
+  --weight-semibold: 620;
 
   --tracking-tight: -0.02em;
   --tracking-snug: -0.01em;
@@ -68,9 +69,9 @@
   --duration-slow: 400ms;
 
   /* Layout */
-  --sidebar-width: 160px;
+  --sidebar-width: 176px;
   --content-width: 600px;
-  --layout-gap: var(--space-16);
+  --layout-gap: var(--space-14);
   --frame-padding: var(--space-12);
   --page-gutter: var(--space-4);
   --topbar-height: 56px;

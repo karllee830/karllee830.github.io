@@ -15,9 +15,9 @@ const { id, title, moreHref, moreLabel } = Astro.props;
   <h2 id={id}>{title}</h2>
   {
     moreHref && (
-      <a class="more" href={moreHref}>
+      <a class="pill-link sq" href={moreHref}>
         {moreLabel}
-        <Icon name="arrow-right" size={14} />
+        <Icon name="arrow-right" size={14} nudge="right" />
       </a>
     )
   }
@@ -26,7 +26,7 @@ const { id, title, moreHref, moreLabel } = Astro.props;
 <style>
   .section-header {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
     gap: var(--space-4);
     margin-bottom: var(--space-4);
@@ -36,24 +36,4 @@ const { id, title, moreHref, moreLabel } = Astro.props;
     font-weight: var(--weight-semibold);
   }
 
-  .more {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-1);
-    color: var(--color-fg-muted);
-    transition: color var(--duration-fast) var(--ease-out);
-  }
-
-  .more :global(svg) {
-    align-self: center;
-    transition: transform var(--duration-base) var(--ease-out);
-  }
-
-  .more:hover {
-    color: var(--color-fg);
-  }
-
-  .more:hover :global(svg) {
-    transform: translateX(2px);
-  }
 </style>

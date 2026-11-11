@@ -1,5 +1,6 @@
 ---
 import PixelWordmark from './PixelWordmark.astro';
+import Icon from './Icon.astro';
 import { site, localize } from '../config/site';
 import { localePath, useTranslations, type Lang } from '../i18n/ui';
 import { withBase } from '../lib/url';
@@ -27,13 +28,13 @@ const elsewhere = site.links
     <section>
       <h2>{t('footer.site')}</h2>
       <ul>
-        {siteLinks.map((l) => (<li><a href={l.href}>{l.label}</a></li>))}
+        {siteLinks.map((l) => (<li><a class="pill-link sq" href={l.href}>{l.label}</a></li>))}
       </ul>
     </section>
     <section>
       <h2>{t('footer.elsewhere')}</h2>
       <ul>
-        {elsewhere.map((l) => (<li><a href={l.href} rel="me noopener">{l.label}</a></li>))}
+        {elsewhere.map((l) => (<li><a class="pill-link sq" href={l.href} rel="me noopener">{l.label}<Icon name="arrow-up-right" size={12} nudge="up-right" class="ext" /></a></li>))}
       </ul>
     </section>
     <p class="copyright">© {year} {site.name}</p>
@@ -57,23 +58,29 @@ const elsewhere = site.links
   }
 
   h2 {
-    margin-bottom: var(--space-3);
+    margin-bottom: var(--space-2);
     font-weight: var(--weight-regular);
     color: var(--color-fg-subtle);
   }
 
   ul {
     display: grid;
-    gap: var(--space-2);
+    gap: var(--space-1);
   }
 
-  a {
-    color: var(--color-fg-muted);
-    transition: color var(--duration-fast) var(--ease-out);
+  ul {
+    justify-items: start;
   }
 
-  a:hover {
-    color: var(--color-fg);
+  .ext {
+    opacity: 0;
+    transition:
+      opacity var(--duration-fast) var(--ease-out),
+      transform var(--duration-base) var(--ease-out);
+  }
+
+  a:hover .ext {
+    opacity: 1;
   }
 
   .copyright {
