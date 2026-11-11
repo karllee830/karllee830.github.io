@@ -2,7 +2,8 @@ import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type 
 import { createAsciiEngine, type AsciiEngine, type RenderMode } from '../../lib/ascii-engine';
 import './ascii-avatar.css';
 
-const MODES: RenderMode[] = ['ascii', 'pixel', 'dots', 'dither'];
+// Order of the mode buttons (independent of the engine's internal mode codes).
+const MODES: RenderMode[] = ['ascii', 'dither', 'pixel', 'dots'];
 
 interface Props {
   label: string;

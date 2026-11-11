@@ -6,8 +6,9 @@ import { buildAvatarModel } from './avatar-model';
  *
  * The canvas is a grid of 12×12 "units"; each avatar pixel maps to one
  * unit, drawn as two monospace glyphs (ASCII), a block (Pixel), a
- * halftone dot (Dots) or a 4×4 ordered-dither cell (Dither). Units outside the figure form a quiet dot field
- * that lights up around the pointer and on tap ripples.
+ * halftone dot (Dots) or a 4×4 ordered-dither cell (Dither). Units outside
+ * the figure form a quiet background in the same style, which lights up
+ * around the pointer and on tap ripples.
  *
  * The loop only runs while something is moving, so an idle hero costs
  * nothing.
@@ -64,7 +65,7 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
   let from = new Int8Array(0);
 
   let mode = MODES.indexOf(initialMode);
-  let colors = { fg: '#000', subtle: '#999', accent: '#669fd0' };
+  let colors = { fg: '#000', subtle: '#999', accent: '#669fd0', line: '#e8e8e8' };
   let font = '500 10px monospace';
 
   const pointer = { x: 0, y: 0, inside: false };
@@ -84,6 +85,7 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
       fg: style.getPropertyValue('--color-fg').trim() || colors.fg,
       subtle: style.getPropertyValue('--color-fg-subtle').trim() || colors.subtle,
       accent: style.getPropertyValue('--color-accent').trim() || colors.accent,
+      line: style.getPropertyValue('--color-line-strong').trim() || colors.line,
     };
     font = `500 10px ${style.fontFamily || 'monospace'}`;
   }
@@ -170,13 +172,68 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
     }
   }
 
+  /**
+   * Quiet background for a unit outside the figure, matched to the mode:
+   * ASCII gets faint dots of text, Pixel a grid (drawn once per frame in
+   * drawGrid), Dots a halftone field, Dither a dithered fade toward the floor.
+   */
+  function drawBackdrop(m: number, i: number, cx: number, cy: number, tint = false) {
+    if (halo[i] && m !== 1) return;
+    const c2d = ctx!;
+    c2d.fillStyle = tint ? colors.accent : colors.subtle;
+    if (m === 1) {
+      drawGridCell(i, tint);
+    } else if (m === 0) {
+      c2d.globalAlpha = 0.5;
+      c2d.fillText('.', cx - 3, cy);
+      c2d.fillText('.', cx + 3, cy);
+    } else if (m === 2) {
+      c2d.globalAlpha = 0.9;
+      c2d.beginPath();
+      c2d.arc(cx, cy, 0.9, 0, Math.PI * 2);
+      c2d.fill();
+    } else {
+      const r = (i / cols) | 0;
+      const depth = rows > 1 ? r / (rows - 1) : 0;
+      c2d.globalAlpha = 0.7;
+      ditherUnit(i % cols, r, 0.03 + 0.3 * depth * depth);
+    }
+  }
+
+  /**
+   * Pixel mode: hairline grid on unit boundaries, like a sprite editor.
+   * Drawn per unit (top and left edges, plus the outer edges) so it can
+   * change unit by unit during a mode transition.
+   */
+  function drawGridCell(i: number, tint = false) {
+    const c2d = ctx!;
+    const c = i % cols;
+    const r = (i / cols) | 0;
+    const x = originX + c * UNIT;
+    const y = originY + r * UNIT;
+    c2d.globalAlpha = tint ? 0.9 : 0.6;
+    c2d.fillStyle = tint ? colors.accent : colors.line;
+    c2d.fillRect(x - 0.5, y, 1, UNIT);
+    c2d.fillRect(x, y - 0.5, UNIT, 1);
+    if (c === cols - 1) c2d.fillRect(x + UNIT - 0.5, y, 1, UNIT);
+    if (r === rows - 1) c2d.fillRect(x, y + UNIT - 0.5, UNIT, 1);
+  }
+
+  /** Mode a unit currently shows; -2 while it is inside the transition wavefront. */
+  function shownMode(i: number, now: number) {
+    const at = switchAt[i];
+    if (now >= at) return mode;
+    if (now >= at - SCRAMBLE_MS) return -2;
+    return from[i];
+  }
+
   function drawField(i: number, cx: number, cy: number, now: number) {
     const h = heat[i];
     if (h < 0.04) {
-      if (halo[i]) return;
-      ctx!.globalAlpha = 0.9;
-      ctx!.fillStyle = colors.subtle;
-      ctx!.fillRect(cx - 0.75, cy - 0.75, 1.5, 1.5);
+      const m = shownMode(i, now);
+      // The wavefront previews the incoming background in the accent colour.
+      if (m === -2) drawBackdrop(mode, i, cx, cy, true);
+      else if (m !== NONE) drawBackdrop(m, i, cx, cy);
       return;
     }
     ctx!.fillStyle = colors.accent;
@@ -275,6 +332,8 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
           continue;
         }
         const at = switchAt[i];
+        // Figure units in Pixel mode sit on the same grid as the background.
+        if (shownMode(i, now) === 1) drawGridCell(i);
         if (now < at - SCRAMBLE_MS) {
           if (from[i] !== NONE) drawFigure(from[i], i, x, y, now);
         } else if (now < at) {
@@ -354,8 +413,23 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
     const now = performance.now();
     const instant = reducedMotion.matches;
     let end = now;
+    // Background units change in a ring that spreads out from the figure.
+    const centerC = cols / 2;
+    const centerR = (figureRowMin + figureRowMax) / 2;
+    const reach = Math.hypot(Math.max(centerC, cols - centerC), Math.max(centerR, rows - centerR)) || 1;
     for (let i = 0; i < tone.length; i++) {
-      if (tone[i] < 0) continue;
+      if (tone[i] < 0) {
+        if (kind === 'intro') continue;
+        from[i] = now >= switchAt[i] ? mode : from[i];
+        if (instant) {
+          switchAt[i] = 0;
+          continue;
+        }
+        const d = Math.hypot((i % cols) - centerC, ((i / cols) | 0) - centerR) / reach;
+        switchAt[i] = now + SCRAMBLE_MS + d * 520 + Math.random() * 60;
+        end = Math.max(end, switchAt[i]);
+        continue;
+      }
       const shown = now >= switchAt[i] ? mode : from[i];
       from[i] = kind === 'intro' ? NONE : shown;
       if (instant) {
