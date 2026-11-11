@@ -2,7 +2,7 @@
 // Monochrome rendition of the pixel avatar (head and shoulders), drawn
 // with currentColor so it follows the theme.
 import { avatar } from '../data/avatar';
-import { buildAvatarModel } from '../lib/avatar-model';
+import { buildAvatarModel, headCrop, markOpacity } from '../lib/avatar-model';
 
 interface Props {
   size?: number;
@@ -10,15 +10,7 @@ interface Props {
 }
 
 const { size = 24, class: className } = Astro.props;
-const model = buildAvatarModel(avatar);
-
-// Square crop around the head.
-const { x0, x1, y0 } = model.bounds;
-const span = 16;
-const cx = Math.round((x0 + x1 + 1) / 2);
-const left = cx - span / 2;
-const top = y0 - 1;
-const cells = model.cells.filter((c) => c.x >= left && c.x < left + span && c.y >= top && c.y < top + span);
+const { left, top, span, cells } = headCrop(buildAvatarModel(avatar));
 ---
 
 <svg
@@ -37,7 +29,7 @@ const cells = model.cells.filter((c) => c.x >= left && c.x < left + span && c.y 
         width="1"
         height="1"
         fill={c.accent ? 'var(--color-accent)' : 'currentColor'}
-        fill-opacity={c.accent ? c.tone.toFixed(2) : (0.12 + 0.88 * c.tone).toFixed(2)}
+        fill-opacity={markOpacity(c).toFixed(2)}
       />
     ))
   }

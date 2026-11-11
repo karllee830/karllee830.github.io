@@ -6,15 +6,17 @@ export interface SiteLink {
   label: Localized;
   detail: Localized;
   href: string;
-  icon: 'github' | 'rss' | 'pen' | 'code' | 'mail' | 'x' | 'link';
+  icon: 'github' | 'rss' | 'pen' | 'code' | 'mail' | 'x' | 'wechat' | 'link';
   /** Internal paths are resolved against the base path and current locale. */
   internal?: boolean;
   /** For internal links: whether the path should get the locale prefix. */
   localized?: boolean;
+  /** Instead of linking, clicking copies this text (for IDs without a URL). */
+  copy?: string;
 }
 
 export const site = {
-  name: 'Karl Lee',
+  name: 'Karl Coding',
   /** Drawn as the pixel wordmark in the footer (A–Z, 0–9). */
   wordmark: 'KARL',
   github: 'karllee830',
@@ -39,11 +41,11 @@ export const site = {
 
   meta: {
     zh: {
-      title: 'Karl Lee',
+      title: 'Karl Coding',
       description: 'Karl 的个人网站：写过的文章、做过的小东西和常去的链接。',
     },
     en: {
-      title: 'Karl Lee',
+      title: 'Karl Coding',
       description: "Karl's website: writing, things I've made, and links.",
     },
   },
@@ -78,30 +80,31 @@ export const site = {
       icon: 'github',
     },
     {
-      label: { zh: '文章', en: 'Writing' },
-      detail: { zh: '写下来的东西', en: 'Things written down' },
-      href: '/blog/',
-      icon: 'pen',
-      internal: true,
-      localized: true,
+      label: 'X',
+      detail: '@KarlLee830',
+      href: 'https://x.com/KarlLee830',
+      icon: 'x',
     },
     {
-      label: 'RSS',
-      detail: 'rss.xml',
-      href: '/rss.xml',
-      icon: 'rss',
-      internal: true,
+      label: { zh: '邮箱', en: 'Email' },
+      detail: 'karllee0830@gmail.com',
+      href: 'mailto:karllee0830@gmail.com',
+      icon: 'mail',
     },
     {
-      label: { zh: '本站源码', en: 'Source' },
-      detail: 'HomePageTry4',
-      href: 'https://github.com/karllee830/HomePageTry4',
-      icon: 'code',
+      label: { zh: '微信', en: 'WeChat' },
+      detail: 'KarlLee830',
+      href: '',
+      icon: 'wechat',
+      copy: 'KarlLee830',
     },
-    // More examples:
-    // { label: 'X', detail: '@handle', href: 'https://x.com/handle', icon: 'x' },
-    // { label: 'Email', detail: 'you@example.com', href: 'mailto:you@example.com', icon: 'mail' },
+    // Internal pages work too, e.g.:
+    // { label: { zh: '文章', en: 'Writing' }, detail: '…', href: '/blog/', icon: 'pen', internal: true, localized: true },
   ] satisfies SiteLink[] as SiteLink[],
+
+  /** Footer columns. */
+  friends: [{ label: '枯白啃设计', href: 'https://kubai.design/' }],
+  related: [{ label: 'Kubai Icons', href: 'https://icons.kubai.design/' }],
 };
 
 export function localize(value: Localized, lang: Lang): string {

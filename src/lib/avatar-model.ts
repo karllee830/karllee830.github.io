@@ -102,3 +102,17 @@ export function buildAvatarModel(matrix: AvatarMatrix): AvatarModel {
 
   return { width: matrix.width, height: matrix.height, cells, bounds: { x0, y0, x1, y1 } };
 }
+
+/** Square crop of `span` cells around the head, as used by the small marks. */
+export function headCrop(model: AvatarModel, span = 16) {
+  const { x0, x1, y0 } = model.bounds;
+  const left = Math.round((x0 + x1 + 1) / 2) - span / 2;
+  const top = y0 - 1;
+  const cells = model.cells.filter((c) => c.x >= left && c.x < left + span && c.y >= top && c.y < top + span);
+  return { left, top, span, cells };
+}
+
+/** Fill opacity of a cell in the monochrome marks (accent cells use their own tone). */
+export function markOpacity(cell: AvatarCell) {
+  return cell.accent ? cell.tone : 0.12 + 0.88 * cell.tone;
+}

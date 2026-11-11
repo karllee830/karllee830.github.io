@@ -1,7 +1,7 @@
 ---
 import Icon from './Icon.astro';
 import { site, localize } from '../config/site';
-import { localePath, type Lang } from '../i18n/ui';
+import { localePath, useTranslations, type Lang } from '../i18n/ui';
 import { withBase } from '../lib/url';
 
 interface Props {
@@ -9,6 +9,7 @@ interface Props {
 }
 
 const { lang } = Astro.props;
+const t = useTranslations(lang);
 
 /** URL as printed on the tray: no protocol, no trailing slash. */
 const printable = (href: string) => {
@@ -23,7 +24,7 @@ const links = site.links.map((link) => {
     label: localize(link.label, lang),
     detail: localize(link.detail, lang),
     href,
-    url: printable(href),
+    url: link.copy ? `${t('links.copy')} · ${link.copy}` : printable(href),
     external: !link.internal && /^https?:/.test(link.href),
   };
 });
@@ -31,9 +32,15 @@ const links = site.links.map((link) => {
 
 <ul class="link-grid">
   {
-    links.map((link) => (
+    links.map((link) => {
+      // A copy card is a button; everything else is a link. Both share the look.
+      const Tag = link.copy ? 'button' : 'a';
+      const attrs = link.copy
+        ? { type: 'button' as const, 'data-copy': link.copy, 'data-copied': `${t('links.copied')} · ${link.copy}` }
+        : { href: link.href, rel: link.external ? 'me noopener' : undefined };
+      return (
       <li>
-        <a class="link-item" href={link.href} rel={link.external ? 'me noopener' : undefined}>
+        <Tag class="link-item" {...attrs}>
           <span class="card sq sq-line">
             <span class="key sq">
               <Icon name={link.icon} size={16} />
@@ -47,11 +54,34 @@ const links = site.links.map((link) => {
             <span class="led" />
             <span class="url mono">{link.url}</span>
           </span>
-        </a>
+        </Tag>
       </li>
-    ))
+      );
+    })
   }
 </ul>
+
+<script>
+  // Copy cards: put the ID on the clipboard and say so on the tray.
+  for (const button of document.querySelectorAll<HTMLButtonElement>('.link-item[data-copy]')) {
+    const url = button.querySelector<HTMLElement>('.url');
+    const idle = url?.textContent ?? '';
+    let timer = 0;
+    button.addEventListener('click', async () => {
+      const text = button.dataset.copy ?? '';
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch {
+        // No clipboard access: the ID stays readable on the card instead.
+        return;
+      }
+      if (!url) return;
+      url.textContent = button.dataset.copied ?? idle;
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => (url.textContent = idle), 1600);
+    });
+  }
+</script>
 
 <style>
   .link-grid {
@@ -76,6 +106,8 @@ const links = site.links.map((link) => {
   .link-item {
     position: relative;
     display: block;
+    width: 100%;
+    text-align: start;
     isolation: isolate;
     text-decoration: none;
     filter: var(--shadow-rest);

@@ -4,8 +4,10 @@ import ThemeSwitch from './ThemeSwitch.astro';
 import LangSwitch from './LangSwitch.astro';
 import Outline from './Outline.astro';
 import Beian from './Beian.astro';
+import Icon from './Icon.astro';
 import { site } from '../config/site';
 import { localePath, useTranslations, type Lang, type OutlineItem } from '../i18n/ui';
+import { withBase } from '../lib/url';
 
 export type Section = 'home' | 'blog' | 'none';
 
@@ -58,6 +60,12 @@ const items = [
 </header>
 <!-- Desktop copy of the tools, pinned to the bottom of the sidebar column. -->
 <div class="nav-tools is-side">
+  <!-- One, two, three: the feed above the language and theme switches. -->
+  <div class="segmented sq sq-line">
+    <a class="segment sq" href={withBase('/rss.xml')} aria-label={t('rss.label')} title={t('rss.label')}>
+      <Icon name="rss" size={14} />
+    </a>
+  </div>
   <LangSwitch lang={lang} hrefs={langHrefs} />
   <ThemeSwitch lang={lang} />
   <Beian class="side-beian" />
@@ -270,9 +278,9 @@ const items = [
    */
   @media (min-width: 1024px) {
     .nav-slot {
-      /* Two switches plus the two filing lines below them. */
+      /* Three control rows plus the two filing lines below them. */
       --tools-height: calc(
-        2 * var(--control-md) + var(--space-2) + var(--space-4) + 2 * var(--leading-caption) + var(--space-1)
+        3 * var(--control-md) + 2 * var(--space-2) + var(--space-4) + 2 * var(--leading-caption) + var(--space-1)
       );
       display: grid;
       grid-template: 1fr / 1fr;

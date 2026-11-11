@@ -1,4 +1,4 @@
-# Karl Lee — homepage & blog
+# Karl Coding — homepage & blog
 
 A small personal site built with [Astro](https://astro.build) and React islands, deployed to GitHub Pages. Chinese and English, light and dark, blog posts written as Markdown in this repository, comments stored in GitHub Issues.
 
@@ -51,7 +51,7 @@ SITE_URL=https://example.github.io BASE_PATH=/my-repo npm run build
 | Colours, spacing, radius, type, motion | [`src/styles/tokens.css`](src/styles/tokens.css) |
 | Avatar | replace [`src/assets/avatar.svg`](src/assets/avatar.svg), then run `npm run avatar` |
 
-The avatar must be a pixel-art SVG built from `<rect>` elements with a `viewBox`; the first full-size rect is treated as the background. `npm run avatar` regenerates [`src/data/avatar.ts`](src/data/avatar.ts), which drives the hero canvas and the small header mark. Also replace `public/avatar.png` and `public/favicon.svg`.
+The avatar must be a pixel-art SVG built from `<rect>` elements with a `viewBox`; the first full-size rect is treated as the background. `npm run avatar` regenerates [`src/data/avatar.ts`](src/data/avatar.ts), which drives the hero canvas, the small header mark and the favicon. Also replace `public/avatar.png`.
 
 ## Design notes
 
@@ -72,7 +72,7 @@ The avatar must be a pixel-art SVG built from `<rect>` elements with a `viewBox`
 
 ```text
 posts/                  Markdown posts and their images
-public/                 Files copied as-is (favicon, avatar)
+public/                 Files copied as-is (avatar, badges)
 scripts/                Avatar → matrix converter
 src/
   components/           Astro components (+ react/ islands)
