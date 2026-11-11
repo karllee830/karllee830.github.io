@@ -1,8 +1,9 @@
 /**
  * Page background in the style of the hero's current render mode, shown
  * only in the margins outside the page frame: sparse dots of text (ASCII),
- * faint pixel blocks (Pixel), a halftone field (Dots) or a dithered fade
- * toward the bottom of the screen (Dither).
+ * faint pixel blocks (Pixel), a halftone field (Dots), a dithered fade
+ * toward the bottom of the screen (Dither), pairs of braille dots
+ * (Braille), small plus signs (Cross) or short engraved strokes (Hatch).
  *
  * Each style is a small tile repeated as a canvas pattern. When the hero
  * switches modes it dispatches `avatar:mode` with a shared wave
@@ -76,7 +77,8 @@ export function initPageBackdrop() {
     const cached = patterns.get(key);
     if (cached) return cached;
 
-    const size = (m === 'pixel' ? PIXEL_TILE : TILE) * dpr;
+    // Larger marks (blocks, strokes) get the wider spacing.
+    const size = (m === 'pixel' || m === 'hatch' ? PIXEL_TILE : TILE) * dpr;
     const t = document.createElement('canvas');
     t.width = size;
     t.height = size;
@@ -95,6 +97,29 @@ export function initPageBackdrop() {
       const block = PIXEL_BLOCK * dpr;
       const offset = (size - block) / 2;
       c.fillRect(offset, offset, block, block);
+    } else if (m === 'braille') {
+      // A pair of braille dots per tile.
+      c.globalAlpha = tint ? 0.9 : 0.45;
+      for (const dy of [-1.5, 1.5]) {
+        c.beginPath();
+        c.arc(size / 2, size / 2 + dy * dpr, 0.8 * dpr, 0, Math.PI * 2);
+        c.fill();
+      }
+    } else if (m === 'cross') {
+      c.globalAlpha = tint ? 0.9 : 0.35;
+      const arm = (tint ? 3 : 2) * dpr;
+      c.fillRect(size / 2 - arm, size / 2 - dpr / 2, arm * 2, dpr);
+      c.fillRect(size / 2 - dpr / 2, size / 2 - arm, dpr, arm * 2);
+    } else if (m === 'hatch') {
+      // One short engraved stroke per wide tile.
+      c.globalAlpha = tint ? 0.9 : 0.22;
+      c.strokeStyle = c.fillStyle;
+      c.lineWidth = dpr;
+      const half = (tint ? 4 : 3) * dpr;
+      c.beginPath();
+      c.moveTo(size / 2 - half, size / 2 + half);
+      c.lineTo(size / 2 + half, size / 2 - half);
+      c.stroke();
     } else if (m === 'dots') {
       c.globalAlpha = tint ? 0.9 : 0.6;
       c.beginPath();

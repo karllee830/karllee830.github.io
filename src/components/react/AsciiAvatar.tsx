@@ -4,7 +4,7 @@ import { MODE_EVENT, MODE_STORAGE_KEY, readStoredMode, type ModeWave, type Rende
 import './ascii-avatar.css';
 
 // Order of the mode buttons (independent of the engine's internal mode codes).
-const MODES: RenderMode[] = ['ascii', 'dither', 'pixel', 'dots'];
+const MODES: RenderMode[] = ['ascii', 'dither', 'pixel', 'dots', 'cross', 'braille', 'hatch'];
 
 interface Props {
   label: string;
@@ -72,12 +72,37 @@ export default function AsciiAvatar({ label, modesLabel, replayLabel, modeLabels
       const chip = chipRefs.current[MODES.indexOf(mode)];
       if (!chip) return;
       setThumb({ width: chip.offsetWidth, transform: `translateX(${chip.offsetLeft}px)` });
+      updateFades();
     };
     place();
     const observer = new ResizeObserver(place);
     observer.observe(group);
     return () => observer.disconnect();
   }, [mode]);
+
+  // Keep the active chip inside the scrollable row.
+  useEffect(() => {
+    const group = modesRef.current;
+    const chip = chipRefs.current[MODES.indexOf(mode)];
+    if (!group || !chip) return;
+    const left = chip.offsetLeft - 24;
+    const right = chip.offsetLeft + chip.offsetWidth + 24 - group.clientWidth;
+    const target = Math.min(Math.max(group.scrollLeft, right), left);
+    if (target !== group.scrollLeft) {
+      group.scrollTo({ left: target, behavior: settled ? 'smooth' : 'auto' });
+    }
+    // Smooth scrolling may not report every step; settle the edge fades after it.
+    const timer = window.setTimeout(updateFades, 450);
+    return () => window.clearTimeout(timer);
+  }, [mode, settled]);
+
+  /** Fade an edge only while more chips wait beyond it. */
+  const updateFades = () => {
+    const group = modesRef.current;
+    if (!group) return;
+    group.toggleAttribute('data-more-left', group.scrollLeft > 1);
+    group.toggleAttribute('data-more-right', group.scrollLeft + group.clientWidth < group.scrollWidth - 1);
+  };
 
   // Arrow keys move between options, as in a native radio group.
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -101,6 +126,7 @@ export default function AsciiAvatar({ label, modesLabel, replayLabel, modeLabels
           role="radiogroup"
           aria-label={modesLabel}
           onKeyDown={onKeyDown}
+          onScroll={updateFades}
           data-ready={thumb ? '' : undefined}
           data-settled={settled ? '' : undefined}
         >

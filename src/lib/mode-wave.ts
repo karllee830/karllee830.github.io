@@ -5,7 +5,7 @@
  * its front, so the two read as a single ripple.
  */
 
-export type RenderMode = 'ascii' | 'pixel' | 'dots' | 'dither';
+export type RenderMode = 'ascii' | 'pixel' | 'dots' | 'dither' | 'braille' | 'cross' | 'hatch';
 
 export interface ModeWave {
   mode: RenderMode;
@@ -22,7 +22,7 @@ export const WAVE_WIDTH = 36; // px
 export const MODE_STORAGE_KEY = 'avatar-mode';
 export const MODE_EVENT = 'avatar:mode';
 
-const MODES: RenderMode[] = ['ascii', 'pixel', 'dots', 'dither'];
+const MODES: RenderMode[] = ['ascii', 'pixel', 'dots', 'dither', 'braille', 'cross', 'hatch'];
 
 export function readStoredMode(): RenderMode {
   try {

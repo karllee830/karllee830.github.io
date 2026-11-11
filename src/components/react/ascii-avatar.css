@@ -32,10 +32,49 @@
   gap: var(--space-2);
 }
 
+.ascii-bar {
+  min-width: 0;
+}
+
+/* Seven modes do not fit a phone: the row scrolls, with faded edges where more waits. */
 .ascii-modes {
+  --fade-left: 0px;
+  --fade-right: 0px;
   position: relative;
   display: flex;
+  flex: 1;
   gap: var(--space-1);
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 var(--fade-left),
+    #000 calc(100% - var(--fade-right)),
+    transparent 100%
+  );
+}
+
+.ascii-modes::-webkit-scrollbar {
+  display: none;
+}
+
+.ascii-modes[data-more-left] {
+  --fade-left: 24px;
+}
+
+.ascii-modes[data-more-right] {
+  --fade-right: 24px;
+}
+
+.ascii-chip {
+  flex-shrink: 0;
+}
+
+.ascii-replay {
+  flex-shrink: 0;
 }
 
 .ascii-thumb {

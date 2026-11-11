@@ -36,7 +36,15 @@ const prefixLength = [...intro.prefix.replace(/\s/g, '')].length;
       label={t('avatar.label')}
       modesLabel={t('avatar.modes')}
       replayLabel={t('avatar.replay')}
-      modeLabels={{ ascii: t('avatar.ascii'), pixel: t('avatar.pixel'), dots: t('avatar.dots'), dither: t('avatar.dither') }}
+      modeLabels={{
+        ascii: t('avatar.ascii'),
+        pixel: t('avatar.pixel'),
+        dots: t('avatar.dots'),
+        dither: t('avatar.dither'),
+        braille: t('avatar.braille'),
+        cross: t('avatar.cross'),
+        hatch: t('avatar.hatch'),
+      }}
     />
 
     <div class="bio">

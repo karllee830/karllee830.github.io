@@ -7,7 +7,8 @@ import { buildAvatarModel } from './avatar-model';
  *
  * The canvas is a grid of 12×12 "units"; each avatar pixel maps to one
  * unit, drawn as two monospace glyphs (ASCII), a block (Pixel), a
- * halftone dot (Dots) or a 4×4 ordered-dither cell (Dither). Units outside
+ * halftone dot (Dots), a 4×4 ordered-dither cell (Dither), a 2×4 braille
+ * cell (Braille), a plus sign (Cross) or engraved diagonal strokes (Hatch). Units outside
  * the figure form a quiet background in the same style.
  *
  * The pointer carries a lens that eases after it: inside it the figure is
@@ -26,7 +27,8 @@ import { buildAvatarModel } from './avatar-model';
 
 export type { RenderMode };
 
-const MODES: RenderMode[] = ['ascii', 'pixel', 'dots', 'dither'];
+// Index = internal mode code used by the drawing functions below.
+const MODES: RenderMode[] = ['ascii', 'pixel', 'dots', 'dither', 'braille', 'cross', 'hatch'];
 const NONE = -1;
 
 const UNIT = 12;
@@ -80,6 +82,11 @@ function deepen(hex: string) {
 const DITHER_CELLS = 4;
 const DITHER_SIZE = UNIT / DITHER_CELLS;
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v + 0.5) / 16);
+
+// Braille: fill order of the 2×4 dot cell as [column, row], spread evenly.
+const BRAILLE_ORDER: [number, number][] = [
+  [0, 1], [1, 2], [1, 0], [0, 3], [0, 0], [1, 3], [1, 1], [0, 2],
+];
 
 export interface AsciiEngine {
   /** With a wave, the switch follows it (shared with the page backdrop). */
@@ -302,6 +309,49 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
   }
 
   /**
+   * Braille cell: up to eight dots in a 2×4 grid, lit in a fixed order that
+   * spreads them evenly, so `count` reads as density.
+   */
+  function braille(cx: number, cy: number, count: number, radius = 1.15) {
+    for (let k = 0; k < Math.min(8, count); k++) {
+      const [col, row] = BRAILLE_ORDER[k];
+      g.beginPath();
+      g.arc(cx + (col ? 2.5 : -2.5), cy - 4.5 + row * 3, radius, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+
+  /** Plus sign centred in a unit (Cross): arm half-length `arm`, stroke `stroke`. */
+  function plus(cx: number, cy: number, arm: number, stroke: number) {
+    g.fillRect(cx - arm, cy - stroke / 2, arm * 2, stroke);
+    g.fillRect(cx - stroke / 2, cy - arm, stroke, arm * 2);
+  }
+
+  /**
+   * Hatch: diagonal strokes clipped to the unit. Lines lie on u + v = k in
+   * unit space, so neighbouring units join into continuous engraving lines.
+   * Levels: 1 = centre stroke, 2 = two strokes, 3 = two plus a cross stroke.
+   */
+  function hatch(x: number, y: number, level: number, width = 1) {
+    g.lineWidth = width;
+    g.beginPath();
+    const slash = (k: number) => {
+      g.moveTo(x + Math.max(0, k - UNIT), y + Math.min(UNIT, k));
+      g.lineTo(x + Math.min(UNIT, k), y + Math.max(0, k - UNIT));
+    };
+    if (level === 1) slash(UNIT);
+    if (level >= 2) {
+      slash(UNIT - 3);
+      slash(UNIT + 3);
+    }
+    if (level >= 3) {
+      g.moveTo(x, y);
+      g.lineTo(x + UNIT, y + UNIT);
+    }
+    g.stroke();
+  }
+
+  /**
    * Quiet background for a unit outside the figure, matched to the mode:
    * ASCII gets faint dots of text, Pixel faint empty pixel slots, Dots a
    * halftone field, Dither a dithered fade toward the floor.
@@ -322,6 +372,20 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
       c2d.beginPath();
       c2d.arc(cx, cy, 0.9, 0, Math.PI * 2);
       c2d.fill();
+    } else if (m === 4) {
+      c2d.globalAlpha = tint ? 0.9 : 0.5;
+      braille(cx, cy, tint ? 2 : 1, 0.8);
+    } else if (m === 5) {
+      c2d.globalAlpha = tint ? 0.9 : 0.4;
+      plus(cx, cy, tint ? 2.5 : 1.5, 1);
+    } else if (m === 6) {
+      c2d.globalAlpha = tint ? 0.9 : 0.3;
+      c2d.strokeStyle = c2d.fillStyle;
+      c2d.lineWidth = 1;
+      c2d.beginPath();
+      c2d.moveTo(cx - 2, cy + 2);
+      c2d.lineTo(cx + 2, cy - 2);
+      c2d.stroke();
     } else {
       const r = (i / cols) | 0;
       const depth = rows > 1 ? r / (rows - 1) : 0;
@@ -356,6 +420,13 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
     } else if (mode === 3) {
       g.globalAlpha = 1;
       ditherUnit(i % cols, (i / cols) | 0, h * 0.9);
+    } else if (mode === 4) {
+      braille(cx, cy, Math.ceil(h * 8));
+    } else if (mode === 5) {
+      plus(cx, cy, 1.5 + h * 3.5, 1 + h * 1.5);
+    } else if (mode === 6) {
+      g.strokeStyle = colors.accent;
+      hatch(cx - HALF, cy - HALF, Math.min(3, 1 + Math.floor(h * 3)));
     } else {
       g.beginPath();
       g.arc(cx, cy, 0.8 + h * 4, 0, Math.PI * 2);
@@ -432,6 +503,47 @@ export function createAsciiEngine(canvas: HTMLCanvasElement, initialMode: Render
       if (h > 0.02) {
         g.fillStyle = colors.accent;
         ditherUnit(c, r, h);
+      }
+      return;
+    }
+
+    if (m === 4) {
+      // Darker pixels light more of the eight dots.
+      const count = Math.max(1, Math.round(t * 8));
+      g.fillStyle = tint && lightTheme ? deepenCached(tint) : ink;
+      g.globalAlpha = tint ? 1 : isAccent ? 0.6 + 0.4 * t : 0.5 + 0.5 * t;
+      braille(cx, cy, count);
+      if (h > 0.02) {
+        g.fillStyle = colors.accent;
+        g.globalAlpha = h;
+        braille(cx, cy, Math.ceil(h * 8));
+      }
+      return;
+    }
+
+    if (m === 5) {
+      // Darker pixels get larger, heavier crosses.
+      g.fillStyle = tint && lightTheme ? deepenCached(tint) : ink;
+      g.globalAlpha = tint ? 1 : isAccent ? t : 0.35 + 0.65 * t;
+      plus(cx, cy, 2 + t * 3.5, 1 + t * 2);
+      if (h > 0.02) {
+        g.fillStyle = colors.accent;
+        g.globalAlpha = h;
+        plus(cx, cy, 2 + h * 3.5, 1 + h * 2);
+      }
+      return;
+    }
+
+    if (m === 6) {
+      // Light pixels: one stroke; mid: two; dark: two plus a cross stroke.
+      const level = t < 0.4 ? 1 : t < 0.75 ? 2 : 3;
+      g.strokeStyle = tint && lightTheme ? deepenCached(tint) : ink;
+      g.globalAlpha = tint ? 1 : isAccent ? 0.6 + 0.4 * t : 0.45 + 0.55 * t;
+      hatch(x, y, level, tint ? 1.4 : 1);
+      if (h > 0.02) {
+        g.strokeStyle = colors.accent;
+        g.globalAlpha = h;
+        hatch(x, y, Math.min(3, 1 + Math.floor(h * 3)), 1.2);
       }
       return;
     }
