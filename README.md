@@ -87,3 +87,7 @@ src/
   styles/               Tokens, base, controls, prose
   views/                Page bodies shared by both locales
 ```
+
+## License
+
+Copyright (c) 2026 Karl Lee. Everything in this repository is licensed under [CC BY-NC-ND 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/): you may share it with credit to the author and a link to the source, but not for commercial purposes and not in modified form. Third-party packages, trademarks and visitors' comments are excluded; see [`LICENSE`](LICENSE).
