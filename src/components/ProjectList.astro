@@ -1,0 +1,108 @@
+---
+// Project cards: icon, name, a short line about it and its stack.
+import Icon from './Icon.astro';
+import { site, localize } from '../config/site';
+import type { Lang } from '../i18n/ui';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const projects = site.projects.map((p) => ({ ...p, name: localize(p.name, lang), description: localize(p.description, lang) }));
+---
+
+<ul class="project-grid">
+  {
+    projects.map((p) => (
+      <li>
+        <a class="project sq sq-line" href={p.href} rel="noopener">
+          <Icon name={p.icon} size={32} />
+          <span class="text">
+            <span class="name">{p.name}</span>
+            <span class="description">{p.description}</span>
+          </span>
+          <span class="tags">
+            {p.tags.map((tag) => (
+              <span class="tag mono sq">{tag}</span>
+            ))}
+          </span>
+        </a>
+      </li>
+    ))
+  }
+</ul>
+
+<style>
+  .project-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+    gap: var(--space-2);
+  }
+
+  li {
+    display: grid;
+  }
+
+  /* Card radius 16 with 16px padding; tags are small pills at the foot. */
+  .project {
+    --sq-r: var(--radius-4);
+    --sq-bg: var(--color-bg);
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    transition:
+      --sq-bg var(--duration-fast) var(--ease-out),
+      --sq-border var(--duration-fast) var(--ease-out),
+      transform var(--duration-fast) var(--ease-out);
+  }
+
+  .project:hover,
+  .project:focus-visible {
+    --sq-bg: var(--color-surface);
+    --sq-border: var(--color-line-strong);
+  }
+
+  .project:active {
+    transform: scale(0.99);
+  }
+
+  .project :global(.kubai-icon) {
+    color: var(--color-accent);
+  }
+
+  .text {
+    display: grid;
+    gap: var(--space-1);
+    align-content: start;
+  }
+
+  .name {
+    font-weight: var(--weight-medium);
+  }
+
+  .description {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    color: var(--color-fg-muted);
+  }
+
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+  }
+
+  .tag {
+    --sq-r: 6px;
+    padding: 2px 6px;
+    font-size: 11px;
+    line-height: 16px;
+    color: var(--color-fg-muted);
+    background-color: var(--color-surface-2);
+  }
+</style>

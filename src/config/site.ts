@@ -1,4 +1,5 @@
 import type { Lang } from '../i18n/ui';
+import type { IconName } from '../lib/icons';
 
 type Localized = string | Record<Lang, string>;
 
@@ -16,6 +17,14 @@ export interface SiteLink {
 }
 
 const EMAIL = 'karllee0830@gmail.com';
+
+export interface SiteProject {
+  name: Localized;
+  icon: IconName;
+  description: Localized;
+  href: string;
+  tags: string[];
+}
 
 export const site = {
   name: 'Karl Coding',
@@ -106,6 +115,30 @@ export const site = {
     // Internal pages work too, e.g.:
     // { label: { zh: '文章', en: 'Writing' }, detail: '…', href: '/blog/', icon: 'pen', internal: true, localized: true },
   ] satisfies SiteLink[] as SiteLink[],
+
+  /** Shown under "Recent projects" on the home page, newest first. */
+  projects: [
+    {
+      name: { zh: 'OpenHane 羽见', en: 'OpenHane' },
+      description: {
+        zh: '自托管的语音、视频和屏幕共享，不用注册账号，各平台都有客户端。',
+        en: 'Self-hosted voice, video and screen sharing. No accounts, clients for every platform.',
+      },
+      icon: 'headphones',
+      href: 'https://github.com/karllee830/OpenHane',
+      tags: ['Go', 'WebRTC'],
+    },
+    {
+      name: 'openai-imagegen-mcp',
+      description: {
+        zh: '用 GPT Image 生成和编辑图片的 MCP 服务器，原图保存在本地。',
+        en: 'An MCP server that makes and edits images with GPT Image, saving originals locally.',
+      },
+      icon: 'image-sparkle',
+      href: 'https://github.com/karllee830/openai-imagegen-mcp',
+      tags: ['MCP', 'TypeScript'],
+    },
+  ] satisfies SiteProject[] as SiteProject[],
 
   /** Friends' sites, listed in the footer. */
   friends: [

@@ -3,6 +3,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import RevealText from '../components/RevealText.astro';
 import SectionHeader from '../components/SectionHeader.astro';
 import PostList from '../components/PostList.astro';
+import ProjectList from '../components/ProjectList.astro';
 import LinkGrid from '../components/LinkGrid.astro';
 import AsciiAvatar from '../components/react/AsciiAvatar';
 import ScrambleText from '../components/react/ScrambleText';
@@ -57,6 +58,11 @@ const wordLength = [...(intro.words[0] ?? '').replace(/\s/g, '')].length;
   <section class="section" aria-labelledby="writing-title">
     <SectionHeader id="writing-title" title={t('home.writing')} moreHref={localePath(lang, '/blog/')} moreLabel={t('home.allPosts')} />
     {posts.length > 0 ? <PostList posts={posts} lang={lang} /> : <p class="empty">{t('home.empty')}</p>}
+  </section>
+
+  <section class="section" aria-labelledby="projects-title">
+    <SectionHeader id="projects-title" title={t('home.projects')} moreHref={`https://github.com/${site.github}?tab=repositories`} moreLabel={t('home.allProjects')} />
+    <ProjectList lang={lang} />
   </section>
 
   <section class="section" id="links" aria-labelledby="links-title">
