@@ -42,8 +42,8 @@ const links = site.links.map((link) => {
       <li>
         <Tag class="link-item" {...attrs}>
           <span class="card sq sq-line">
-            <span class="key sq">
-              <Icon name={link.icon} size={16} />
+            <span class="key">
+              <Icon name={link.icon} size={28} />
             </span>
             <span class="text">
               <span class="label">{link.label}</span>
@@ -114,7 +114,7 @@ const links = site.links.map((link) => {
     transition: filter var(--duration-base) var(--ease-out);
   }
 
-  /* Card radius 16 with 8px padding → key radius 8. */
+  /* Card radius 16 with 8px padding. */
   .card {
     --card-radius: var(--radius-4);
     --card-padding: var(--space-2);
@@ -151,29 +151,19 @@ const links = site.links.map((link) => {
     pointer-events: none;
   }
 
-  /* Keycap-style icon well. */
+  /* The icon stands on the card itself, no well behind it. */
   .key {
-    --sq-r: calc(var(--card-radius) - var(--card-padding));
     display: grid;
     place-items: center;
     flex-shrink: 0;
     width: var(--control-lg);
     height: var(--control-lg);
-    color: var(--color-fg);
-    background-color: var(--color-surface-2);
-    box-shadow:
-      inset 0 1px 0 transparent,
-      inset 0 -2px 0 transparent;
-    transition:
-      color var(--duration-fast) var(--ease-out),
-      background-color var(--duration-base) var(--ease-out),
-      box-shadow var(--duration-base) var(--ease-out),
-      transform var(--duration-fast) var(--ease-out);
+    transition: transform var(--duration-fast) var(--ease-out);
   }
 
-
-  .key :global(svg) {
-    transition: transform var(--duration-slow) var(--ease-out);
+  /* The one place icons take the accent. */
+  .key :global(.kubai-icon) {
+    color: var(--color-accent);
   }
 
   .text {
@@ -262,19 +252,6 @@ const links = site.links.map((link) => {
     opacity: 1;
   }
 
-  .link-item:hover .key,
-  .link-item:focus-visible .key {
-    background-color: var(--key-bottom);
-    background-image: linear-gradient(var(--key-top), var(--key-bottom));
-    box-shadow:
-      inset 0 1px 0 var(--raised-highlight),
-      inset 0 -2px 0 var(--raised-edge);
-  }
-
-  .link-item:hover .key :global(svg),
-  .link-item:focus-visible .key :global(svg) {
-    transform: rotate(-8deg) scale(1.08);
-  }
 
 
   .link-item:hover .tray,
@@ -298,7 +275,7 @@ const links = site.links.map((link) => {
     transition: clip-path 480ms steps(20, end) 140ms;
   }
 
-  /* Pressed: card sinks back and the keycap goes down. */
+  /* Pressed: card sinks back and the icon goes down with it. */
   .link-item:active .card {
     transform: translateY(0);
   }

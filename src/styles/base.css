@@ -270,3 +270,9 @@ p {
     navigation: none;
   }
 }
+
+/* Layered icons take every shade from this colour (see src/lib/icons). */
+.kubai-icon {
+  flex-shrink: 0;
+  color: var(--color-icon);
+}

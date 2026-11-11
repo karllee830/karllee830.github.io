@@ -61,11 +61,9 @@ const items = [
 <!-- Desktop copy of the tools, pinned to the bottom of the sidebar column. -->
 <div class="nav-tools is-side">
   <!-- One, two, three: the feed above the language and theme switches. -->
-  <div class="segmented sq sq-line">
-    <a class="segment sq" href={withBase('/rss.xml')} aria-label={t('rss.label')} title={t('rss.label')}>
-      <Icon name="rss" size={14} />
-    </a>
-  </div>
+  <a class="feed-link" href={withBase('/rss.xml')} aria-label={t('rss.label')} title={t('rss.label')}>
+    <Icon name="rss" size={30} />
+  </a>
   <LangSwitch lang={lang} hrefs={langHrefs} />
   <ThemeSwitch lang={lang} />
   <Beian class="side-beian" />
@@ -259,6 +257,26 @@ const items = [
 
   .nav-tools.is-side {
     display: none;
+  }
+
+  /* The feed is just its icon, in a row as tall as the switches below. */
+  .feed-link {
+    display: inline-grid;
+    place-items: center;
+    align-self: flex-start;
+    height: var(--control-md);
+    /* Centred over the first segment below: 4px inset + 14px, less half the 30px icon. */
+    margin-left: 3px;
+  }
+
+  .feed-link :global(.kubai-icon) {
+    opacity: 0.45;
+    transition: opacity var(--duration-fast) var(--ease-out);
+  }
+
+  .feed-link:hover :global(.kubai-icon),
+  .feed-link:focus-visible :global(.kubai-icon) {
+    opacity: 1;
   }
 
   @media (max-width: 359px) {

@@ -68,17 +68,16 @@
   transform: scale(0.92);
 }
 
-.segment svg {
-  transition: transform var(--duration-slow) var(--ease-out);
+.segment .kubai-icon {
+  opacity: 0.45;
+  transition: opacity var(--duration-fast) var(--ease-out);
 }
 
-/* Icons turn a little when chosen. */
-.segment[data-value="light"][aria-pressed="true"] svg {
-  transform: rotate(90deg);
-}
-
-.segment[data-value="dark"][aria-pressed="true"] svg {
-  transform: rotate(-24deg);
+/* Icons dim like the text labels do, and come up when hovered or chosen. */
+.segment:hover .kubai-icon,
+.segment[aria-pressed="true"] .kubai-icon,
+.segment[aria-current] .kubai-icon {
+  opacity: 1;
 }
 
 /* Theme thumb follows the stored preference, set before first paint. */
