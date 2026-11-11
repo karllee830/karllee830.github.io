@@ -1,5 +1,4 @@
 ---
-import Icon from './Icon.astro';
 
 interface Props {
   id: string;
@@ -15,9 +14,8 @@ const { id, title, moreHref, moreLabel } = Astro.props;
   <h2 id={id}>{title}</h2>
   {
     moreHref && (
-      <a class="pill-link sq" href={moreHref}>
+      <a class="pill-link cursor sq" href={moreHref}>
         {moreLabel}
-        <Icon name="arrow-right" size={14} nudge="right" />
       </a>
     )
   }

@@ -69,9 +69,9 @@
   --duration-slow: 400ms;
 
   /* Layout */
-  --sidebar-width: 176px;
-  --content-width: 600px;
-  --layout-gap: var(--space-14);
+  --sidebar-width: 192px;
+  --content-width: 640px;
+  --layout-gap: var(--space-16);
   --frame-padding: var(--space-12);
   --page-gutter: var(--space-4);
   --topbar-height: 56px;
@@ -93,6 +93,22 @@
   --color-accent: #669fd0;
   --color-accent-ink: #2f6a9d;
   --color-accent-soft: rgb(102 159 208 / 0.16);
+
+  /* Raised surfaces (link cards on hover): soft top light, lift shadow */
+  --raised-top: #ffffff;
+  --raised-bottom: #f5f5f5;
+  --raised-highlight: rgb(255 255 255 / 0.9);
+  --raised-edge: rgb(0 0 0 / 0.05);
+  /* Same shape as --shadow-lift so the filter can interpolate. */
+  --shadow-rest: drop-shadow(0 0 0 transparent) drop-shadow(0 0 0 transparent);
+  --shadow-lift: drop-shadow(0 2px 2px rgb(0 0 0 / 0.06)) drop-shadow(0 12px 16px rgb(0 0 0 / 0.1));
+  --key-top: #fafafa;
+  --key-bottom: #ececec;
+  /* Tray that slides out under a card */
+  --tray-bg: #0b0b0b;
+  --tray-fg: #d4d4d4;
+  --tray-muted: #6b6b6b;
+  --tray-edge: #000000;
 
   /* Code (consumed by Shiki's css-variables theme) */
   --astro-code-foreground: var(--color-fg);
@@ -126,6 +142,18 @@
   --color-accent: #669fd0;
   --color-accent-ink: #8cbae3;
   --color-accent-soft: rgb(102 159 208 / 0.2);
+
+  --raised-top: #181818;
+  --raised-bottom: #111111;
+  --raised-highlight: rgb(255 255 255 / 0.06);
+  --raised-edge: rgb(0 0 0 / 0.4);
+  --shadow-lift: drop-shadow(0 2px 2px rgb(0 0 0 / 0.5)) drop-shadow(0 12px 16px rgb(0 0 0 / 0.6));
+  --key-top: #1f1f1f;
+  --key-bottom: #161616;
+  --tray-bg: #000000;
+  --tray-fg: #d4d4d4;
+  --tray-muted: #5c5c5c;
+  --tray-edge: #262626;
 
   --astro-code-token-comment: #6b6b6b;
   --astro-code-token-keyword: #ededed;

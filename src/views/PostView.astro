@@ -5,7 +5,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import Comments from '../components/Comments.astro';
 import Icon from '../components/Icon.astro';
 import { site } from '../config/site';
-import { localePath, useTranslations } from '../i18n/ui';
+import { localePath, useTranslations, type OutlineItem } from '../i18n/ui';
+import { withBase } from '../lib/url';
 import { formatDate, postHref, readingMinutes, type Post } from '../lib/posts';
 import '../styles/prose.css';
 
@@ -18,8 +19,22 @@ interface Props {
 const { post, prev, next } = Astro.props;
 const { title, description, date, updated, lang, tags, cover, coverAlt } = post.data;
 const t = useTranslations(lang);
-const { Content } = await render(post);
+const { Content, headings } = await render(post);
 const minutes = readingMinutes(post.body);
+
+const outline: OutlineItem[] = [
+  { id: 'post-title', text: t('outline.intro'), depth: 2 },
+  ...headings.filter((h) => h.depth === 2 || h.depth === 3).map((h) => ({ id: h.slug, text: h.text, depth: h.depth })),
+  ...(site.comments.enabled ? [{ id: 'comments-title', text: t('post.comments'), depth: 2 }] : []),
+];
+
+// The pager always offers two ways on: neighbours, or the index and home at the ends.
+const prevLink = prev
+  ? { href: postHref(prev), label: t('post.prev'), title: prev.data.title, rel: 'prev' }
+  : { href: localePath(lang, '/blog/'), label: t('post.prev'), title: t('post.back'), rel: undefined };
+const nextLink = next
+  ? { href: postHref(next), label: t('post.next'), title: next.data.title, rel: 'next' }
+  : { href: localePath(lang, '/'), label: t('post.next'), title: t('post.home'), rel: undefined };
 ---
 
 <BaseLayout
@@ -31,14 +46,14 @@ const minutes = readingMinutes(post.body);
   fallbackRoute="/blog/"
   type="article"
   publishedTime={date}
+  outline={outline}
 >
   <article class="post">
-    <header class="post-header">
-      <a class="back pill-link sq" href={localePath(lang, '/blog/')}>
-        <Icon name="arrow-left" size={14} nudge="left" />
+    <header class="post-header" data-page-opening>
+      <a class="back pill-link cursor sq" href={localePath(lang, '/blog/')}>
         {t('post.back')}
       </a>
-      <h1>{title}</h1>
+      <h1 id="post-title">{title}</h1>
       <p class="meta">
         <time class="mono" datetime={date.toISOString()}>{formatDate(date)}</time>
         <span aria-hidden="true">·</span>
@@ -77,28 +92,41 @@ const minutes = readingMinutes(post.body);
   </article>
 
   <div class="after">
-  {
-    (prev || next) && (
-      <nav class="pager" aria-label={`${t('post.prev')} / ${t('post.next')}`}>
-        {prev ? (
-          <a class="pager-card sq sq-line" href={postHref(prev)} rel="prev">
-            <span class="pager-label">{t('post.prev')}</span>
-            <span class="pager-title">{prev.data.title}</span>
-          </a>
-        ) : (
-          <span />
-        )}
-        {next && (
-          <a class="pager-card next sq sq-line" href={postHref(next)} rel="next">
-            <span class="pager-label">{t('post.next')}</span>
-            <span class="pager-title">{next.data.title}</span>
-          </a>
-        )}
-      </nav>
-    )
-  }
+    <aside class="end-card sq sq-line" aria-labelledby="end-title">
+      <p id="end-title" class="end-title">{t('end.title')}</p>
+      <p class="end-body">{t('end.body')}</p>
+      <div class="end-actions">
+        {
+          site.comments.enabled && (
+            <a class="end-action sq sq-line" href="#comments-title">
+              <Icon name="message" size={14} />
+              {t('end.comment')}
+            </a>
+          )
+        }
+        <a class="end-action sq sq-line" href={`https://github.com/${site.github}`} rel="me noopener">
+          <Icon name="github" size={14} />
+          GitHub
+        </a>
+        <a class="end-action sq sq-line" href={withBase('/rss.xml')}>
+          <Icon name="rss" size={14} />
+          {t('end.subscribe')}
+        </a>
+      </div>
+    </aside>
 
-  {site.comments.enabled && <Comments lang={lang} term={`blog/${post.id}`} />}
+    {site.comments.enabled && <Comments lang={lang} term={`blog/${post.id}`} />}
+
+    <nav class="pager" aria-label={`${t('post.prev')} / ${t('post.next')}`}>
+      <a class="pager-card sq sq-line" href={prevLink.href} rel={prevLink.rel}>
+        <span class="pager-label">{prevLink.label}</span>
+        <span class="pager-title"><span class="cursor">{prevLink.title}</span></span>
+      </a>
+      <a class="pager-card next sq sq-line" href={nextLink.href} rel={nextLink.rel}>
+        <span class="pager-label">{nextLink.label}</span>
+        <span class="pager-title"><span class="cursor">{nextLink.title}</span></span>
+      </a>
+    </nav>
   </div>
 </BaseLayout>
 
@@ -150,6 +178,55 @@ const minutes = readingMinutes(post.body);
     margin-top: var(--space-16);
   }
 
+  /* Looks like a prose block so it reads as part of the article. */
+  .end-card {
+    --sq-r: var(--radius-4);
+    --sq-bg: var(--color-surface-2);
+    display: grid;
+    gap: var(--space-2);
+    padding: var(--space-5);
+  }
+
+  .end-title {
+    font-weight: var(--weight-semibold);
+  }
+
+  .end-body {
+    color: var(--color-fg-muted);
+  }
+
+  .end-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+  }
+
+  /* Radius 12 inside a 16 card (gap ≥ padding, so 12 reads as nested). */
+  .end-action {
+    --sq-r: var(--radius-3);
+    --sq-bg: var(--color-surface);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    height: var(--control-lg);
+    padding-inline: var(--space-4);
+    font-weight: var(--weight-medium);
+    transition:
+      --sq-bg var(--duration-fast) var(--ease-out),
+      --sq-border var(--duration-fast) var(--ease-out),
+      transform var(--duration-fast) var(--ease-out);
+  }
+
+  .end-action:hover {
+    --sq-bg: var(--color-hover);
+    --sq-border: var(--color-line-strong);
+  }
+
+  .end-action:active {
+    transform: scale(0.97);
+  }
+
   .pager {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -184,7 +261,14 @@ const minutes = readingMinutes(post.body);
   }
 
   .pager-label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
     color: var(--color-fg-subtle);
+  }
+
+  .pager-card.next .pager-label {
+    justify-content: flex-end;
   }
 
   .pager-title {

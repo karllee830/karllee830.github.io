@@ -1,0 +1,165 @@
+---
+// Sidebar outline: a list that scrolls on its own, fades the edge where more
+// is hidden, and marks the section being read (see src/lib/layout-scroll.ts).
+import Icon from './Icon.astro';
+import { useTranslations, type Lang, type OutlineItem } from '../i18n/ui';
+
+interface Props {
+  lang: Lang;
+  items: OutlineItem[];
+}
+
+const { lang, items } = Astro.props;
+const t = useTranslations(lang);
+---
+
+<nav class="outline" aria-label={t('outline.label')}>
+  <p class="outline-title">{t('outline.label')}</p>
+  <div class="outline-viewport">
+    <button class="outline-arrow is-up" type="button" tabindex="-1" aria-hidden="true" data-scroll-arrow="up">
+      <Icon name="chevron-up" size={12} />
+    </button>
+    <ul class="outline-list" data-scroll-fade>
+      {
+        items.map((item) => (
+          <li>
+            <a class:list={['outline-link', `depth-${item.depth}`]} href={`#${item.id}`} data-outline-link={item.id}>
+              {item.text}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+    <button class="outline-arrow is-down" type="button" tabindex="-1" aria-hidden="true" data-scroll-arrow="down">
+      <Icon name="chevron-down" size={12} />
+    </button>
+  </div>
+</nav>
+
+<style>
+  .outline {
+    display: none;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-height: 0;
+  }
+
+  @media (min-width: 1024px) {
+    .outline {
+      display: flex;
+    }
+  }
+
+  .outline-title {
+    font-size: var(--text-caption);
+    line-height: var(--leading-caption);
+    color: var(--color-fg-subtle);
+  }
+
+  .outline-viewport {
+    --fade-top: 0px;
+    --fade-bottom: 0px;
+    position: relative;
+    display: flex;
+    min-height: 0;
+  }
+
+  .outline-viewport[data-more-above] {
+    --fade-top: 40px;
+  }
+
+  .outline-viewport[data-more-below] {
+    --fade-bottom: 56px;
+  }
+
+  /* Hidden scrollbar; the faded edges (with a clear strip at the very edge) show there is more. */
+  .outline-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+    mask-image: linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc(var(--fade-top) * 0.15),
+      #000 var(--fade-top),
+      #000 calc(100% - var(--fade-bottom)),
+      transparent calc(100% - var(--fade-bottom) * 0.15),
+      transparent 100%
+    );
+  }
+
+  .outline-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .outline-link {
+    display: block;
+    padding: var(--space-1) 0 var(--space-1) var(--space-3);
+    overflow: hidden;
+    color: var(--color-fg-muted);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    border-left: 1px solid var(--color-line);
+    transition:
+      color var(--duration-fast) var(--ease-out),
+      border-color var(--duration-fast) var(--ease-out);
+  }
+
+  .outline-link.depth-3 {
+    padding-left: var(--space-6);
+  }
+
+  .outline-link:hover {
+    color: var(--color-fg);
+    border-left-color: var(--color-line-strong);
+  }
+
+  .outline-link[aria-current] {
+    color: var(--color-accent-ink);
+    border-left-color: var(--color-accent);
+  }
+
+  /* Mouse-only arrows on edges that have more. */
+  .outline-arrow {
+    position: absolute;
+    left: 50%;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: var(--control-sm);
+    height: var(--control-sm);
+    color: var(--color-fg-muted);
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-50%) scale(0.8);
+    transition:
+      opacity var(--duration-fast) var(--ease-out),
+      transform var(--duration-base) var(--ease-out),
+      background-color var(--duration-fast) var(--ease-out);
+  }
+
+  .outline-arrow.is-up {
+    top: 0;
+  }
+
+  .outline-arrow.is-down {
+    bottom: 0;
+  }
+
+  .outline-arrow:hover {
+    color: var(--color-fg);
+    background-color: var(--color-hover);
+  }
+
+  .outline-viewport[data-more-above] .is-up,
+  .outline-viewport[data-more-below] .is-down {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(-50%);
+  }
+</style>

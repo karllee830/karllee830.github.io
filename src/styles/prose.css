@@ -11,7 +11,6 @@
 }
 
 .prose :is(h2, h3, h4) {
-  scroll-margin-top: calc(var(--topbar-height) + var(--space-6));
   letter-spacing: var(--tracking-snug);
 }
 

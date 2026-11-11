@@ -18,10 +18,18 @@ for (const post of posts) {
   const year = post.data.date.getUTCFullYear();
   years.set(year, [...(years.get(year) ?? []), post]);
 }
+const outline = [...years.keys()].map((year) => ({ id: `year-${year}`, text: String(year), depth: 2 }));
 ---
 
-<BaseLayout lang={lang} title={t('blog.title')} description={t('blog.description')} section="blog" routes={{ zh: '/blog/', en: '/blog/' }}>
-  <header class="page-header">
+<BaseLayout
+  lang={lang}
+  title={t('blog.title')}
+  description={t('blog.description')}
+  section="blog"
+  routes={{ zh: '/blog/', en: '/blog/' }}
+  outline={outline}
+>
+  <header class="page-header" data-page-opening>
     <h1><RevealText text={t('blog.title')} /></h1>
     <p class="count"><span class="mono">{posts.length}</span> {t('blog.count')}</p>
   </header>

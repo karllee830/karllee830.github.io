@@ -114,18 +114,3 @@
   background-color: var(--color-line);
 }
 
-.pill-link svg {
-  transition: transform var(--duration-base) var(--ease-out);
-}
-
-.pill-link:hover [data-nudge="right"] {
-  transform: translateX(2px);
-}
-
-.pill-link:hover [data-nudge="left"] {
-  transform: translateX(-2px);
-}
-
-.pill-link:hover [data-nudge="up-right"] {
-  transform: translate(2px, -2px);
-}

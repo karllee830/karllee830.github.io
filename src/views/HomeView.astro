@@ -23,7 +23,7 @@ const prefixLength = [...intro.prefix.replace(/\s/g, '')].length;
 ---
 
 <BaseLayout lang={lang} section="home" routes={{ zh: '/', en: '/' }}>
-  <section class="hero" aria-labelledby="hero-title">
+  <section class="hero" aria-labelledby="hero-title" data-page-opening>
     <h1 id="hero-title" class="statement">
       <span class="hello"><RevealText text={intro.hello} /></span>
       <span class="sub">
@@ -96,7 +96,6 @@ const prefixLength = [...intro.prefix.replace(/\s/g, '')].length;
 
   .section {
     margin-top: var(--space-16);
-    scroll-margin-top: calc(var(--topbar-height) + var(--space-6));
   }
 
   .empty {
@@ -119,9 +118,4 @@ const prefixLength = [...intro.prefix.replace(/\s/g, '')].length;
     pointer-events: none;
   }
 
-  @media (min-width: 1024px) {
-    .section {
-      scroll-margin-top: var(--space-12);
-    }
-  }
 </style>

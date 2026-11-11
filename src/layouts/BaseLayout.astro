@@ -2,8 +2,9 @@
 import { Font } from 'astro:assets';
 import SiteNav, { type Section } from '../components/SiteNav.astro';
 import SiteFooter from '../components/SiteFooter.astro';
+import MobileDock from '../components/MobileDock.astro';
 import { site } from '../config/site';
-import { htmlLang, langs, localeRoute, ogLocale, useTranslations, type Lang } from '../i18n/ui';
+import { htmlLang, langs, localeRoute, ogLocale, useTranslations, type Lang, type OutlineItem } from '../i18n/ui';
 import { withBase } from '../lib/url';
 import '../styles/tokens.css';
 import '../styles/base.css';
@@ -18,11 +19,13 @@ interface Props {
   routes?: Partial<Record<Lang, string>>;
   /** Where the language switch points when this page has no translation. */
   fallbackRoute?: string;
+  /** Sections listed in the sidebar outline and the mobile dock. */
+  outline?: OutlineItem[];
   type?: 'website' | 'article';
   publishedTime?: Date;
 }
 
-const { lang, title, description, section = 'none', routes = {}, fallbackRoute = '/', type = 'website', publishedTime } = Astro.props;
+const { lang, title, description, section = 'none', routes = {}, fallbackRoute = '/', outline = [], type = 'website', publishedTime } = Astro.props;
 const t = useTranslations(lang);
 const meta = site.meta[lang];
 const pageTitle = title ? `${title} · ${meta.title}` : meta.title;
@@ -83,22 +86,46 @@ const ogImage = new URL(avatarUrl, Astro.site);
     <a class="skip-link" href="#main">{t('skip')}</a>
     <div class="shell">
       <div class="layout">
-        <SiteNav lang={lang} section={section} langHrefs={langHrefs} />
-        <main id="main" class="main">
-          <slot />
-        </main>
+        <SiteNav lang={lang} section={section} langHrefs={langHrefs} outline={outline} />
+        <div class="column">
+          <main id="main" class="main">
+            <slot />
+          </main>
+          <SiteFooter lang={lang} />
+        </div>
       </div>
-      <SiteFooter lang={lang} />
     </div>
+    <MobileDock lang={lang} section={section} outline={outline} />
 
     <script>
       import { initSquircles } from '../lib/squircle';
+      import { initLayoutScroll } from '../lib/layout-scroll';
       initSquircles();
+      initLayoutScroll();
     </script>
   </body>
 </html>
 
 <style is:global>
+  /* Anchors land below the floating header and above the dock. */
+  html {
+    scroll-padding-top: calc(var(--topbar-height) + var(--space-4));
+    scroll-padding-bottom: calc(56px + var(--space-6));
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    html {
+      scroll-padding-top: var(--space-12);
+      scroll-padding-bottom: 0;
+    }
+  }
+
   .skip-link {
     position: fixed;
     top: var(--space-2);
@@ -125,10 +152,14 @@ const ogImage = new URL(avatarUrl, Astro.site);
     width: 100%;
     max-width: calc(var(--content-width) + 2 * var(--page-gutter));
     margin-inline: auto;
-    padding: var(--space-10) var(--page-gutter) 0;
+    padding: var(--space-6) var(--page-gutter) 0;
   }
 
-  /* Desktop: hatched gutters, hairline frame, sticky sidebar. */
+  /*
+   * Desktop: hatched gutters and a hairline frame. The sidebar is a static
+   * column running to the bottom of the page; body and footer share the
+   * right column, split from the sidebar by a hairline.
+   */
   @media (min-width: 1024px) {
     html {
       background-image: repeating-linear-gradient(
@@ -144,19 +175,30 @@ const ogImage = new URL(avatarUrl, Astro.site);
     }
 
     .shell {
-      max-width: calc(var(--sidebar-width) + var(--layout-gap) + var(--content-width) + 2 * var(--frame-padding) + 2px);
+      max-width: calc(
+        2 * var(--frame-padding) + var(--sidebar-width) + var(--layout-gap) + var(--content-width) + 3px
+      );
       margin-inline: auto;
       border-inline: 1px solid var(--color-line);
     }
 
     .layout {
       display: grid;
-      grid-template-columns: var(--sidebar-width) minmax(0, var(--content-width));
-      gap: var(--layout-gap);
-      padding-inline: var(--frame-padding);
+      grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+      min-height: 100dvh;
+      padding-left: var(--frame-padding);
+    }
+
+    .column {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      padding: 0 var(--frame-padding) 0 var(--layout-gap);
+      border-left: 1px solid var(--color-line);
     }
 
     .main {
+      flex: 1 0 auto;
       max-width: none;
       margin: 0;
       padding: var(--space-12) 0 0;

@@ -2,8 +2,9 @@
 import MiniAvatar from './MiniAvatar.astro';
 import ThemeSwitch from './ThemeSwitch.astro';
 import LangSwitch from './LangSwitch.astro';
+import Outline from './Outline.astro';
 import { site } from '../config/site';
-import { localePath, useTranslations, type Lang } from '../i18n/ui';
+import { localePath, useTranslations, type Lang, type OutlineItem } from '../i18n/ui';
 
 export type Section = 'home' | 'blog' | 'none';
 
@@ -11,19 +12,22 @@ interface Props {
   lang: Lang;
   section: Section;
   langHrefs: Record<Lang, string>;
+  outline: OutlineItem[];
 }
 
-const { lang, section, langHrefs } = Astro.props;
+const { lang, section, langHrefs, outline } = Astro.props;
 const t = useTranslations(lang);
 const home = localePath(lang, '/');
 const items = [
   { href: home, label: t('nav.home'), current: section === 'home', key: 'home' },
   { href: localePath(lang, '/blog/'), label: t('nav.blog'), current: section === 'blog', key: 'blog' },
-  { href: `${home}#links`, label: t('nav.links'), current: false, key: 'links' },
+  { href: `${home}#links-title`, label: t('nav.links'), current: false, key: 'links' },
 ];
 ---
 
-<header class="site-nav">
+<!-- The slot keeps the header's space when it turns fixed on narrow screens. -->
+<div class="nav-slot">
+<header class="site-nav" data-site-header>
   <a class="brand sq" href={home} aria-label={site.name}>
     <span class="brand-mark sq"><MiniAvatar size={20} /></span>
     <span class="brand-name">{site.name}</span>
@@ -44,26 +48,80 @@ const items = [
     </ul>
   </nav>
 
-  <div class="nav-tools">
+  {outline.length > 0 && <Outline lang={lang} items={outline} />}
+
+  <div class="nav-tools is-bar">
     <LangSwitch lang={lang} hrefs={langHrefs} />
     <ThemeSwitch lang={lang} />
   </div>
 </header>
+<!-- Desktop copy of the tools, pinned to the bottom of the sidebar column. -->
+<div class="nav-tools is-side">
+  <LangSwitch lang={lang} hrefs={langHrefs} />
+  <ThemeSwitch lang={lang} />
+</div>
+</div>
 
 <style>
+  /*
+   * Narrow screens: the header belongs to the page and scrolls away with it,
+   * then returns as a floating bar once the page opening has left the screen
+   * (data-float is set by src/lib/layout-scroll.ts).
+   */
+  .nav-slot {
+    height: var(--topbar-height);
+  }
+
   .site-nav {
-    position: sticky;
-    top: 0;
-    z-index: 10;
+    position: relative;
+    z-index: 30;
     display: flex;
     align-items: center;
     gap: var(--space-3);
     height: var(--topbar-height);
     padding-inline: var(--page-gutter);
-    background-color: color-mix(in srgb, var(--color-bg) 88%, transparent);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-bottom: 1px solid var(--color-line);
+  }
+
+  .site-nav[data-float] {
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: 0;
+    background-color: color-mix(in srgb, var(--color-bg) 80%, transparent);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    box-shadow:
+      0 1px 0 var(--color-line),
+      0 8px 24px -16px rgb(0 0 0 / 0.25);
+  }
+
+  .site-nav[data-float="floating"] {
+    animation: header-in 320ms var(--ease-out);
+  }
+
+  .site-nav[data-float="leaving"] {
+    animation: header-out 120ms var(--ease-out) forwards;
+  }
+
+  @keyframes header-in {
+    from {
+      opacity: 0;
+      filter: blur(8px);
+      transform: translateY(-24px);
+    }
+  }
+
+  @keyframes header-out {
+    to {
+      opacity: 0;
+      transform: translateY(-12px);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .site-nav[data-float] {
+      animation: none;
+    }
   }
 
   /* Rows are 32px; hover pills bleed 8px so text stays on the grid. */
@@ -128,7 +186,7 @@ const items = [
   }
 
   .nav-links {
-    margin-left: auto;
+    display: none;
   }
 
   .nav-links ul {
@@ -186,6 +244,11 @@ const items = [
   .nav-tools {
     display: flex;
     gap: var(--space-2);
+    margin-left: auto;
+  }
+
+  .nav-tools.is-side {
+    display: none;
   }
 
   @media (max-width: 359px) {
@@ -194,19 +257,47 @@ const items = [
     }
   }
 
-  /* Desktop: sticky sidebar */
+  /*
+   * Desktop: sticky sidebar. It sticks at the place it starts, so nothing
+   * jumps when scrolling begins; the end of the layout pushes it up.
+   */
+  /*
+   * Desktop: the sidebar column runs the full page height. Inside it the
+   * header sticks to the top and the tools stick to the bottom of the same
+   * cell, so both stay on screen while reading.
+   */
   @media (min-width: 1024px) {
+    .nav-slot {
+      --tools-height: calc(2 * var(--control-md) + var(--space-2));
+      display: grid;
+      grid-template: 1fr / 1fr;
+      height: auto;
+      padding: 0 var(--space-6) var(--space-12) 0;
+    }
+
     .site-nav {
+      grid-area: 1 / 1;
+      position: sticky;
+      top: 0;
+      align-self: start;
       flex-direction: column;
       align-items: stretch;
       gap: var(--space-6);
-      height: 100dvh;
-      max-height: 100dvh;
-      padding: var(--space-12) 0;
+      height: auto;
+      /* Leaves room for the tools so the two never overlap. */
+      max-height: calc(100dvh - var(--tools-height) - var(--space-12) - var(--space-6));
+      padding: var(--space-12) 0 0;
+      /* Sticky keeps the margin box in the column, so the header stops above the tools at the end. */
+      margin-bottom: calc(var(--tools-height) + var(--space-6));
+    }
+
+    .site-nav[data-float] {
+      position: sticky;
       background: none;
       backdrop-filter: none;
       -webkit-backdrop-filter: none;
-      border-bottom: 0;
+      box-shadow: none;
+      animation: none;
     }
 
     .brand {
@@ -215,6 +306,7 @@ const items = [
     }
 
     .nav-links {
+      display: block;
       margin: 0 calc(-1 * var(--space-2));
     }
 
@@ -232,11 +324,19 @@ const items = [
       display: block;
     }
 
-    .nav-tools {
+    .nav-tools.is-bar {
+      display: none;
+    }
+
+    .nav-tools.is-side {
+      grid-area: 1 / 1;
+      position: sticky;
+      bottom: var(--space-12);
+      align-self: end;
+      display: flex;
       flex-direction: column;
       align-items: flex-start;
       gap: var(--space-2);
-      margin-top: auto;
     }
   }
 </style>

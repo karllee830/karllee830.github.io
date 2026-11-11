@@ -41,6 +41,15 @@ export const ui = {
     'post.comments': '评论',
     'post.commentsLoading': '评论加载中',
     'post.commentsNote': '评论基于 GitHub Issues，登录 GitHub 即可参与。',
+    'outline.label': '本页目录',
+    'outline.intro': '开头',
+    'dock.menu': '菜单',
+    'dock.close': '关闭',
+    'end.title': '读完了，聊两句？',
+    'end.body': '有想法、问题或者纠错，都欢迎留言，也可以通过下面的方式找到我。',
+    'end.comment': '留言',
+    'end.subscribe': '订阅 RSS',
+    'post.home': '首页',
     'footer.site': '站点',
     'footer.elsewhere': '其他地方',
     'notFound.title': '这里什么都没有',
@@ -80,6 +89,15 @@ export const ui = {
     'post.comments': 'Comments',
     'post.commentsLoading': 'Loading comments',
     'post.commentsNote': 'Comments live in GitHub Issues — sign in with GitHub to join.',
+    'outline.label': 'On this page',
+    'outline.intro': 'Intro',
+    'dock.menu': 'Menu',
+    'dock.close': 'Close',
+    'end.title': 'Thoughts?',
+    'end.body': 'Questions, ideas or corrections are welcome in the comments, or reach me another way below.',
+    'end.comment': 'Comment',
+    'end.subscribe': 'Subscribe via RSS',
+    'post.home': 'Home',
     'footer.site': 'Site',
     'footer.elsewhere': 'Elsewhere',
     'notFound.title': 'Nothing here',
@@ -87,6 +105,13 @@ export const ui = {
     'notFound.home': 'Back home',
   },
 } as const;
+
+/** One entry in a page outline (table of contents). */
+export interface OutlineItem {
+  id: string;
+  text: string;
+  depth: number;
+}
 
 export type UIKey = keyof (typeof ui)['zh'];
 

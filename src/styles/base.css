@@ -109,6 +109,40 @@ p {
   font-variant-numeric: tabular-nums;
 }
 
+/*
+ * Link cue: a terminal-style block cursor appears after the text on hover
+ * and blinks, in place of arrow icons. Put `.cursor` on the link itself or
+ * on the text span inside it.
+ */
+.cursor::after {
+  content: "";
+  display: inline-block;
+  flex-shrink: 0;
+  width: 0.5em;
+  height: 1.05em;
+  margin-left: 0.2em;
+  vertical-align: -0.16em;
+  background-color: var(--color-accent);
+  opacity: 0;
+  transform: scaleY(0.4);
+  transition:
+    opacity var(--duration-fast) var(--ease-out),
+    transform var(--duration-base) var(--ease-out);
+}
+
+:is(a, button):is(:hover, :focus-visible) .cursor::after,
+.cursor:is(a, button):is(:hover, :focus-visible)::after {
+  opacity: 1;
+  transform: none;
+  animation: cursor-blink 1.06s steps(1, end) 400ms infinite;
+}
+
+@keyframes cursor-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
 /* Underlined text link */
 .link {
   text-decoration-line: underline;
@@ -219,6 +253,11 @@ p {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  /* A steady cursor instead of a blink. */
+  .cursor::after {
+    animation: none !important;
+  }
+
   *,
   *::before,
   *::after {

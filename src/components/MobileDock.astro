@@ -1,0 +1,277 @@
+---
+// Narrow screens: a bar fixed at the bottom. The left half opens the site
+// menu, the right half shows the section being read and opens the outline.
+// Both open as bottom sheets (<dialog>), wired in src/lib/layout-scroll.ts.
+import Icon from './Icon.astro';
+import type { Section } from './SiteNav.astro';
+import { localePath, useTranslations, type Lang, type OutlineItem } from '../i18n/ui';
+
+interface Props {
+  lang: Lang;
+  section: Section;
+  outline: OutlineItem[];
+}
+
+const { lang, section, outline } = Astro.props;
+const t = useTranslations(lang);
+const home = localePath(lang, '/');
+const pages = [
+  { href: home, label: t('nav.home'), current: section === 'home' },
+  { href: localePath(lang, '/blog/'), label: t('nav.blog'), current: section === 'blog' },
+  { href: `${home}#links-title`, label: t('nav.links'), current: false },
+];
+const pageLabel = pages.find((p) => p.current)?.label ?? t('dock.menu');
+---
+
+<div class="dock">
+  <div class:list={['dock-bar sq sq-line', { 'is-single': outline.length === 0 }]}>
+    <button class="dock-half sq" type="button" data-open-sheet="sheet-pages" aria-haspopup="dialog">
+      <Icon name="menu" size={16} />
+      <span class="dock-text">{pageLabel}</span>
+    </button>
+    {
+      outline.length > 0 && (
+        <button class="dock-half is-outline sq" type="button" data-open-sheet="sheet-outline" aria-haspopup="dialog" aria-label={t('outline.label')}>
+          <span class="dock-text" data-outline-label>{outline[0].text}</span>
+          <Icon name="list" size={16} />
+        </button>
+      )
+    }
+  </div>
+</div>
+
+<dialog class="sheet" id="sheet-pages" data-sheet aria-label={t('dock.menu')}>
+  <div class="sheet-panel sq sq-line">
+    <header class="sheet-head">
+      <p>{t('dock.menu')}</p>
+      <button class="sheet-close sq" type="button" data-close-sheet aria-label={t('dock.close')}>
+        <Icon name="close" size={16} />
+      </button>
+    </header>
+    <ul class="sheet-list">
+      {
+        pages.map((page) => (
+          <li>
+            <a class="sheet-link sq" href={page.href} aria-current={page.current ? 'page' : undefined}>
+              {page.label}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</dialog>
+
+{
+  outline.length > 0 && (
+    <dialog class="sheet" id="sheet-outline" data-sheet aria-label={t('outline.label')}>
+      <div class="sheet-panel sq sq-line">
+        <header class="sheet-head">
+          <p>{t('outline.label')}</p>
+          <button class="sheet-close sq" type="button" data-close-sheet aria-label={t('dock.close')}>
+            <Icon name="close" size={16} />
+          </button>
+        </header>
+        <ul class="sheet-list">
+          {outline.map((item) => (
+            <li>
+              <a class:list={['sheet-link sq', `depth-${item.depth}`]} href={`#${item.id}`} data-outline-link={item.id}>
+                {item.text}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </dialog>
+  )
+}
+
+<style>
+  .dock {
+    position: fixed;
+    right: var(--space-2);
+    bottom: calc(var(--space-2) + env(safe-area-inset-bottom));
+    left: var(--space-2);
+    z-index: 20;
+    filter: drop-shadow(0 8px 16px rgb(0 0 0 / 0.12));
+  }
+
+  /* Bar radius 16, 4px inset → halves use radius 12. */
+  .dock-bar {
+    --dock-radius: var(--radius-4);
+    --dock-inset: var(--space-1);
+    --sq-r: var(--dock-radius);
+    --sq-bg: color-mix(in srgb, var(--color-surface) 82%, transparent);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--dock-inset);
+    max-width: var(--content-width);
+    height: 56px;
+    margin-inline: auto;
+    padding: calc(var(--dock-inset) - 1px);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+
+  .dock-bar.is-single {
+    grid-template-columns: 1fr;
+  }
+
+  .dock-half {
+    --sq-r: calc(var(--dock-radius) - var(--dock-inset));
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+    padding-inline: var(--space-3);
+    font-weight: var(--weight-medium);
+    color: var(--color-fg);
+    transition:
+      background-color var(--duration-fast) var(--ease-out),
+      transform var(--duration-fast) var(--ease-out);
+  }
+
+  .dock-half:hover {
+    background-color: var(--color-hover);
+  }
+
+  .dock-half:active {
+    transform: scale(0.97);
+  }
+
+  .dock-half.is-outline {
+    justify-content: space-between;
+    color: var(--color-fg-muted);
+  }
+
+  .dock-text {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  /* Bottom sheet: no dimming, slides up 24px as it fades in. */
+  .sheet {
+    position: fixed;
+    inset: auto var(--space-2) calc(var(--space-2) + env(safe-area-inset-bottom));
+    width: auto;
+    max-width: var(--content-width);
+    max-height: 72svh;
+    margin: 0 auto;
+    padding: 0;
+    color: inherit;
+    background: none;
+    border: 0;
+    overflow: visible;
+    filter: drop-shadow(0 12px 32px rgb(0 0 0 / 0.18));
+  }
+
+  .sheet::backdrop {
+    background: transparent;
+  }
+
+  .sheet[open] {
+    display: flex;
+    animation: sheet-in 260ms var(--ease-out);
+  }
+
+  .sheet[data-closing] {
+    animation: sheet-out 120ms var(--ease-out) forwards;
+  }
+
+  @keyframes sheet-in {
+    from {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+  }
+
+  @keyframes sheet-out {
+    to {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+  }
+
+  .sheet-panel {
+    --sq-r: var(--radius-5);
+    --sq-bg: var(--color-surface);
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-height: 0;
+    padding: var(--space-2);
+  }
+
+  .sheet-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-1) var(--space-1) var(--space-2) var(--space-3);
+    color: var(--color-fg-subtle);
+  }
+
+  .sheet-close {
+    --sq-r: var(--radius-3);
+    display: grid;
+    place-items: center;
+    width: var(--control-lg);
+    height: var(--control-lg);
+    color: var(--color-fg-muted);
+    transition: background-color var(--duration-fast) var(--ease-out);
+  }
+
+  .sheet-close:hover {
+    background-color: var(--color-hover);
+  }
+
+  .sheet-list {
+    display: grid;
+    gap: 2px;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  /* One size up from the desktop list: 48px rows, 16px text. */
+  .sheet-link {
+    --sq-r: var(--radius-3);
+    display: flex;
+    align-items: center;
+    min-height: 48px;
+    padding-inline: var(--space-3);
+    font-size: var(--text-prose);
+    color: var(--color-fg-muted);
+    transition:
+      background-color var(--duration-fast) var(--ease-out),
+      color var(--duration-fast) var(--ease-out);
+  }
+
+  .sheet-link.depth-3 {
+    padding-left: var(--space-8);
+  }
+
+  .sheet-link:hover {
+    background-color: var(--color-hover);
+    color: var(--color-fg);
+  }
+
+  .sheet-link[aria-current] {
+    color: var(--color-accent-ink);
+    background-color: var(--color-accent-soft);
+  }
+
+  @media (min-width: 1024px) {
+    .dock,
+    .sheet {
+      display: none !important;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sheet[open],
+    .sheet[data-closing] {
+      animation: none;
+    }
+  }
+</style>
