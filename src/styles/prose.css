@@ -126,7 +126,64 @@
   border-radius: var(--radius-3);
 }
 
+/* A code block: language and copy button above the code, one box around both. */
+.prose .code-block {
+  background-color: var(--color-surface-2);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-3);
+}
+
+.prose .code-block pre {
+  padding-top: 0;
+  background-color: transparent !important;
+  border: 0;
+  border-radius: 0;
+}
+
+.code-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-1) 0 var(--space-4);
+}
+
+.code-lang {
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  font-weight: var(--weight-medium);
+  color: var(--color-fg-subtle);
+}
+
+.code-copy {
+  display: inline-grid;
+  place-items: center;
+  width: var(--control-md);
+  height: var(--control-md);
+  color: var(--color-fg-subtle);
+  border-radius: var(--radius-2);
+  transition:
+    color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out);
+}
+
+.code-copy:hover {
+  color: var(--color-fg);
+  background-color: var(--color-hover);
+}
+
+.code-copy .done-icon,
+.code-copy.is-copied .copy-icon {
+  display: none;
+}
+
+.code-copy.is-copied .done-icon {
+  display: block;
+  color: var(--color-accent);
+}
+
 @supports (corner-shape: squircle) {
+  .prose .code-block,
   .prose pre,
   .prose img {
     corner-shape: squircle;

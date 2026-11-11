@@ -53,6 +53,13 @@ const greet = (name: string) => `Hello, ${name}!`;
 console.log(greet('world'));
 ```
 
+```python
+def greet(name: str) -> str:
+    return f"Hello, {name}!"
+
+print(greet("world"))
+```
+
 ```bash
 npm install
 npm run dev

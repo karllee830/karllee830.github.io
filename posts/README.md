@@ -45,6 +45,8 @@ slug: custom-url             # optional, overrides the folder name
 
 Reference images with relative paths, e.g. `![Alt text](./figure.png)`. They are optimised at build time.
 
+Fence code with its language, e.g. ` ```python `, to get highlighting and a language label; every code block has a copy button.
+
 To credit an image, give it a title: an image on its own line with a title gets that title as a caption underneath, and `[text](url)` inside it becomes a link.
 
 ```md

@@ -32,7 +32,9 @@ async function standalone(post: Post, origin: string) {
     const url = file ? (await getImage({ src: file, width: 1200 })).src : src;
     html = html.replace(tag, `<img src="${escape(new URL(url, origin).href)}" alt="${escape(alt)}">`);
   }
-  return html.replace(/(href|src)="(\/[^"]*)"/g, (_, attr, url) => `${attr}="${new URL(url, origin).href}"`);
+  return html
+    .replace(/<button[^>]*data-copy-code[^>]*>[\s\S]*?<\/button>/g, '') // copy buttons do nothing in a reader
+    .replace(/(href|src)="(\/[^"]*)"/g, (_, attr, url) => `${attr}="${new URL(url, origin).href}"`);
 }
 
 /** A feed holding the post itself, with its full text, for following that one post. */
