@@ -204,6 +204,24 @@ const nextLink = next
     color: var(--color-fg-muted);
   }
 
+  /* Where a footnote link lands: the accent glow pulses three times, then is gone. */
+  .prose :global(.is-landed) {
+    border-radius: var(--radius-1);
+    outline: none;
+    animation: landed 700ms ease-in-out 3;
+  }
+
+  @keyframes landed {
+    0%,
+    100% {
+      background-color: transparent;
+    }
+
+    50% {
+      background-color: var(--color-accent-soft);
+    }
+  }
+
   /* The license line closes the post, set apart from the text by a hairline. */
   .license {
     margin-top: var(--space-10);
@@ -343,3 +361,45 @@ const nextLink = next
   }
 </style>
 
+<script>
+  // Footnote links (the number and the ↩ back link) bring their target to the middle of
+  // the screen rather than the top, and light it up once it has arrived so the eye finds it.
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+  let waiting = 0;
+
+  /** Calls `done` once the page has stopped scrolling (no movement for a few frames). */
+  function afterScroll(done: () => void) {
+    cancelAnimationFrame(waiting);
+    let last = window.scrollY;
+    let still = 0;
+    const started = performance.now();
+    const check = () => {
+      still = window.scrollY === last ? still + 1 : 0;
+      last = window.scrollY;
+      // Give up waiting after two seconds, e.g. when the tab is in the background.
+      if (still >= 6 || performance.now() - started > 2000) done();
+      else waiting = requestAnimationFrame(check);
+    };
+    waiting = requestAnimationFrame(check);
+  }
+
+  const land = (target: HTMLElement) => {
+    target.classList.remove('is-landed');
+    void target.offsetWidth;
+    target.classList.add('is-landed');
+  };
+
+  document.addEventListener('click', (event) => {
+    const link = (event.target as Element).closest<HTMLAnchorElement>('a[data-footnote-ref], a[data-footnote-backref]');
+    if (!link || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const target = document.getElementById(decodeURIComponent(link.hash.slice(1)));
+    if (!target) return;
+    event.preventDefault();
+    history.pushState(null, '', link.hash);
+    target.scrollIntoView({ block: 'center', behavior: reduced.matches ? 'auto' : 'smooth' });
+    // A footnote is a list item; let it take focus so keyboard users land there too.
+    if (!target.matches('a, button')) target.tabIndex = -1;
+    target.focus({ preventScroll: true });
+    afterScroll(() => land(target));
+  });
+</script>
