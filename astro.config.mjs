@@ -2,6 +2,8 @@
 import { defineConfig, fontProviders } from 'astro/config';
 import react from '@astrojs/react';
 import sitemap from '@astrojs/sitemap';
+import { satteri } from '@astrojs/markdown-satteri';
+import { figureCaptions } from './src/lib/markdown/figures.mjs';
 
 // GitHub Actions passes these in (see .github/workflows/deploy.yml).
 // For a user site (<name>.github.io) BASE_PATH is empty.
@@ -51,5 +53,6 @@ export default defineConfig({
   ],
   markdown: {
     shikiConfig: { theme: 'css-variables' },
+    processor: satteri({ hastPlugins: [figureCaptions] }),
   },
 });

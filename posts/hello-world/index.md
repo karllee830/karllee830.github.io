@@ -73,7 +73,7 @@ npm run dev
 
 ## 图片
 
-![站点蓝色的柔和渐变](./gradient.jpg)
+![站点蓝色的柔和渐变](./gradient.jpg "测试图片")
 
 ## 分隔线
 

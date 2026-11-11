@@ -72,7 +72,7 @@ npm run dev
 
 ## Image
 
-![A soft gradient in the site blue](./gradient.jpg)
+![A soft gradient in the site blue](./gradient.jpg "Test image")
 
 ## Rule
 
