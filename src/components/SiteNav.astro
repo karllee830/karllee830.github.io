@@ -301,7 +301,8 @@ const items = [
         3 * var(--control-md) + 2 * var(--space-2) + var(--space-4) + 2 * var(--leading-caption) + var(--space-1)
       );
       display: grid;
-      grid-template: 1fr / 1fr;
+      /* minmax(0, …) keeps long outline headings from widening the column past the sidebar. */
+      grid-template: 1fr / minmax(0, 1fr);
       height: auto;
       padding: 0 var(--space-6) var(--space-12) 0;
     }
