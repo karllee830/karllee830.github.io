@@ -116,7 +116,9 @@
 
 .prose pre {
   padding: var(--space-4);
+  /* Sideways only, so the page keeps the wheel (see the table rule below). */
   overflow-x: auto;
+  overflow-y: hidden;
   font-family: var(--font-mono);
   font-size: 13px;
   line-height: 20px;
@@ -346,10 +348,14 @@
   border-bottom-color: var(--color-line-strong);
 }
 
+/* Sideways scrolling only: with collapsed borders the last row pokes half a pixel
+   past the box, and a vertical scroll range that small would capture the wheel
+   and stop the page mid-scroll. */
 .prose .table-wrap,
 .prose > table {
   display: block;
   overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .prose kbd {
