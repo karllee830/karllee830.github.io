@@ -1,0 +1,44 @@
+name: Flatten apex DNS
+
+# Points leekarl.com's A/AAAA records at the EdgeOne nodes serving each DNSPod line.
+# See scripts/dns/flatten-apex.mjs.
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # Re-enables this workflow each run, so GitHub doesn't pause the schedule after
+  # 60 days without commits.
+  actions: write
+
+concurrency:
+  group: dns-flatten
+  cancel-in-progress: false
+
+jobs:
+  flatten:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: scripts/dns
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Sync apex records
+        run: node scripts/dns/flatten-apex.mjs
+        env:
+          DNSPOD_SECRET_ID: ${{ secrets.DNSPOD_SECRET_ID }}
+          DNSPOD_SECRET_KEY: ${{ secrets.DNSPOD_SECRET_KEY }}
+
+      - name: Keep the schedule alive
+        if: ${{ always() }}
+        run: gh api -X PUT "repos/$GITHUB_REPOSITORY/actions/workflows/dns-flatten.yml/enable"
+        env:
+          GH_TOKEN: ${{ github.token }}
