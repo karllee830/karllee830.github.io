@@ -2,9 +2,10 @@
 //
 // The apex can't hold a CNAME next to its MX and TXT records, so this does the "CNAME
 // flattening" a paid DNS plan would: for every DNSPod resolution line it asks public DoH
-// resolvers for the target, passing an EDNS Client Subnet typical of that line's visitors so
-// the CDN picks nodes for them, then writes the answers as plain records on that line.
-// Records of other types (MX, TXT, ...) are never touched.
+// resolvers for the target, passing an EDNS Client Subnet of that line's network in Shanghai
+// (or abroad, for the default line) so the CDN picks a node for those visitors, then writes
+// that node as a plain record on the line. Records of other types (MX, TXT, ...) are never
+// touched.
 //
 //   DNSPOD_SECRET_ID=… DNSPOD_SECRET_KEY=… node scripts/dns/flatten-apex.mjs [--dry-run]
 //
@@ -18,19 +19,21 @@ import { isIP } from 'node:net';
 const DOMAIN = process.env.APEX_DOMAIN ?? 'leekarl.com';
 const TARGETS = (process.env.APEX_TARGETS ?? `${DOMAIN}.pages.dnsoe4.com,www.${DOMAIN}.pages.dnsoe5.com`).split(',');
 const TTL = 600;
-// Records of one type a line may hold ("负载均衡数量"; 2 on DNSPod's free plan).
-const MAX_PER_LINE = Number(process.env.DNSPOD_MAX_PER_LINE ?? 2);
+// Records of one type a line may hold at once ("负载均衡数量"; 2 on DNSPod's free plan).
+// Each line publishes one node, so the spare slot lets a swap add before it removes.
+const PLAN_LIMIT = Number(process.env.DNSPOD_MAX_PER_LINE ?? 2);
 const DRY_RUN = process.argv.includes('--dry-run');
 
-// DNSPod line → a client subnet representative of the visitors that line serves.
+// DNSPod line → a Shanghai client subnet of that network (abroad for "默认").
 // More specific lines win in DNSPod, so "境内" only catches mainland networks not listed
-// (most of them now run on China Mobile's backbone), and "默认" serves everyone else.
+// (it follows China Telecom), and "默认" serves everyone else.
+const TELECOM = '202.96.209.0/24';
 const LINES = [
-  { line: '电信', subnet: '202.96.128.0/24' },
-  { line: '联通', subnet: '123.123.123.0/24' },
-  { line: '移动', subnet: '211.136.192.0/24' },
-  { line: '教育网', subnet: '166.111.0.0/24' },
-  { line: '境内', subnet: '211.136.192.0/24' },
+  { line: '电信', subnet: TELECOM },
+  { line: '联通', subnet: '210.22.70.0/24' },
+  { line: '移动', subnet: '211.136.112.0/24' },
+  { line: '教育网', subnet: '202.120.2.0/24' },
+  { line: '境内', subnet: TELECOM },
   { line: '默认', subnet: '8.8.8.0/24' },
 ];
 
@@ -40,16 +43,24 @@ const RESOLVERS = [
 ];
 
 /**
- * The target's addresses of one type as seen from `subnet`: a sorted array (empty when the
- * name has none of that type), or null when no resolver gave a usable answer.
+ * The target's addresses of one type as seen from `subnet`, in the CDN's order (empty when
+ * the name has none of that type), or null when no resolver gave a usable answer.
  */
 async function resolve(type, subnet) {
-  for (const target of TARGETS) {
-    const ips = await resolveName(target, type, subnet);
-    if (ips !== null) return ips;
+  // Lines sharing subnets must agree within a run, and the CDN's answers vary between queries.
+  const key = `${type} ${subnet}`;
+  if (!resolved.has(key)) {
+    resolved.set(key, (async () => {
+      for (const target of TARGETS) {
+        const ips = await resolveName(target, type, subnet);
+        if (ips !== null) return ips;
+      }
+      return null;
+    })());
   }
-  return null;
+  return resolved.get(key);
 }
+const resolved = new Map();
 
 async function resolveName(name, type, subnet) {
   const code = type === 'A' ? 1 : 28;
@@ -63,7 +74,7 @@ async function resolveName(name, type, subnet) {
       if (!ips.every((ip) => isIP(ip) === (type === 'A' ? 4 : 6))) continue;
       // A CNAME chain that ends nowhere means the target is broken, not that it has no addresses.
       if (type === 'A' && ips.length === 0) continue;
-      return [...new Set(ips)].sort();
+      return [...new Set(ips)];
     } catch {
       // Try the next resolver.
     }
@@ -126,18 +137,18 @@ async function main() {
   for (const type of ['A', 'AAAA']) {
     const existing = DRY_RUN && !process.env.DNSPOD_SECRET_ID ? [] : await apexRecords(type);
     for (const { line, subnet } of LINES) {
-      const resolved = await resolve(type, subnet);
-      if (resolved === null) {
+      const ips = await resolve(type, subnet);
+      if (ips === null) {
         // Leave the line alone rather than act on a failed lookup.
-        console.warn(`${type} ${line}: could not resolve ${TARGETS.join(" or ")}; keeping current records`);
+        console.warn(`${type} ${line}: could not resolve ${TARGETS.join(' or ')}; keeping current records`);
         failures++;
         continue;
       }
       const current = existing.filter((r) => r.Line === line);
-      // Prefer addresses already published, so records don't churn when the CDN returns more
-      // nodes than the line can hold.
-      const kept = resolved.filter((ip) => current.some((r) => r.Value === ip)).slice(0, MAX_PER_LINE);
-      const wanted = [...kept, ...resolved.filter((ip) => !kept.includes(ip))].slice(0, MAX_PER_LINE);
+      // The CDN rotates the order of its answers, so keep a node that is already published
+      // while it's still among them; otherwise take the first.
+      const pick = ips.find((ip) => current.some((r) => r.Value === ip)) ?? ips[0];
+      const wanted = pick ? [pick] : [];
       const stale = current.filter((r) => !wanted.includes(r.Value));
       const missing = wanted.filter((ip) => !current.some((r) => r.Value === ip));
       console.log(`${type} ${line}: ${wanted.join(' ') || '(none)'}${stale.length || missing.length ? '' : ' (unchanged)'}`);
@@ -146,7 +157,7 @@ async function main() {
       // goes empty.
       let count = current.length;
       for (const ip of missing) {
-        if (count >= MAX_PER_LINE) {
+        if (count >= PLAN_LIMIT) {
           const r = stale.shift();
           await dnspod('DeleteRecord', { Domain: DOMAIN, RecordId: r.RecordId });
           console.log(`  - ${r.Value}`);
