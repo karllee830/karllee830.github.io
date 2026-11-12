@@ -6,6 +6,9 @@ import MobileDock from '../components/MobileDock.astro';
 import { site } from '../config/site';
 import { htmlLang, langs, localeRoute, ogLocale, useTranslations, type Lang, type OutlineItem } from '../i18n/ui';
 import { withBase } from '../lib/url';
+// Chinese fallback for systems without PingFang; split by unicode-range, so only the
+// slices a page uses are downloaded, and none where PingFang is installed.
+import '@fontsource-variable/noto-sans-sc';
 import '../styles/tokens.css';
 import '../styles/base.css';
 import '../styles/controls.css';

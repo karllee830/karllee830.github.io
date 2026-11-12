@@ -25,7 +25,10 @@ export default defineConfig({
       provider: fontProviders.local(),
       name: 'Google Sans Flex',
       cssVariable: '--font-display',
-      fallbacks: ['sans-serif'],
+      // Chinese: PingFang where the system has it (Apple), otherwise the self-hosted
+      // Noto Sans SC (Source Han Sans), imported in BaseLayout. Emoji fonts sit before it so
+      // emoji keep their system colour glyphs instead of loading Noto's.
+      fallbacks: ['PingFang SC', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Sans SC Variable', 'sans-serif'],
       options: {
         variants: [
           {

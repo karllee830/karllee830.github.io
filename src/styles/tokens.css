@@ -36,7 +36,8 @@
   --control-lg: 40px;
 
   /* Typography */
-  --font-sans: var(--font-display), "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  /* --font-display already carries the Chinese fallbacks (see astro.config.mjs). */
+  --font-sans: var(--font-display);
   --font-mono: var(--font-code), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
   --text-caption: 12px;
@@ -54,9 +55,10 @@
   --text-headline: 28px;
   --leading-headline: 36px;
 
-  --weight-regular: 420;
-  --weight-medium: 520;
-  --weight-semibold: 620;
+  /* Whole steps, so CJK fallback fonts with fixed weights (PingFang, YaHei) pick the intended one. */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
 
   --tracking-tight: -0.02em;
   --tracking-snug: -0.01em;
