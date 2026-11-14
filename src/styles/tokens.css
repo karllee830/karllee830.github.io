@@ -99,6 +99,13 @@
   /* Icon ink: every shade of an icon is mixed from it, so it stays mid-dark. */
   --color-icon: #2e3036;
 
+  /* Scrollbars: a slim pill on a clear track */
+  --scrollbar-size: 12px;
+  --scrollbar-inset: 3px;
+  --scrollbar-thumb: var(--color-line-strong);
+  --scrollbar-thumb-hover: var(--color-fg-subtle);
+  --scrollbar-thumb-active: var(--color-accent);
+
   /* Raised surfaces (link cards on hover): soft top light, lift shadow */
   --raised-top: #ffffff;
   --raised-bottom: #f5f5f5;
@@ -145,6 +152,8 @@
   --color-accent-ink: #8cbae3;
   --color-accent-soft: rgb(102 159 208 / 0.2);
   --color-icon: #5c616b;
+  --scrollbar-thumb: #333333;
+  --scrollbar-thumb-hover: #4a4a4a;
 
   --raised-top: #181818;
   --raised-bottom: #111111;

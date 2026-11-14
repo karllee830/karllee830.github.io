@@ -91,6 +91,51 @@ p {
   outline-offset: 2px;
 }
 
+/*
+ * Scrollbars, vertical and horizontal alike: a rounded thumb inset from the
+ * edges of a transparent track, darkening on hover and taking the accent
+ * while dragged. WebKit and Blink use the pseudo-elements; Firefox, which
+ * lacks them, gets the standard properties.
+ */
+::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+  background-color: transparent;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background-color: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  min-width: 32px;
+  min-height: 32px;
+  background-color: var(--scrollbar-thumb);
+  background-clip: padding-box;
+  border: var(--scrollbar-inset) solid transparent;
+  border-radius: var(--radius-pill);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background-color: var(--scrollbar-thumb-active);
+}
+
+::-webkit-scrollbar-button {
+  display: none;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+}
+
 /* Utilities */
 .sr-only {
   position: absolute;
