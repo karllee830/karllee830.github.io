@@ -1,0 +1,13 @@
+---
+// Chinese text with a <wbr> between phrases (see src/lib/phrases.mjs), for
+// headings and titles set with `word-break: keep-all`.
+import { phrases } from '../lib/phrases.mjs';
+
+interface Props {
+  text: string;
+}
+
+const parts = phrases(Astro.props.text);
+---
+
+{parts.map((part, i) => (i > 0 ? <><wbr />{part}</> : part))}

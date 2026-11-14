@@ -97,6 +97,31 @@
   color: var(--color-fg-muted);
 }
 
+/*
+ * Chinese body text is justified on a measure of whole characters: the column
+ * is rounded down to a multiple of 1em, and lists and quotes indent by whole
+ * characters too.
+ */
+.prose:lang(zh) {
+  width: round(down, 100%, 1em);
+}
+
+.prose:lang(zh) :is(p, li, dd, blockquote) {
+  text-align: justify;
+}
+
+.prose:lang(zh) :is(ul, ol) {
+  padding-left: 2em;
+}
+
+.prose:lang(zh) ul > li::before {
+  left: -1em;
+}
+
+.prose:lang(zh) blockquote {
+  padding-left: calc(1em - 2px);
+}
+
 .prose hr {
   height: 1px;
   margin-block: var(--space-12);

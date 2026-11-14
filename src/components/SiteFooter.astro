@@ -1,6 +1,7 @@
 ---
 import PixelWordmark from './PixelWordmark.astro';
 import Beian from './Beian.astro';
+import Phrases from './Phrases.astro';
 import { site } from '../config/site';
 import { localePath, useTranslations, type Lang } from '../i18n/ui';
 import { withBase } from '../lib/url';
@@ -33,7 +34,7 @@ const columns = [
     {
       columns.map((column) => (
         <section>
-          <h2>{column.title}</h2>
+          <h2><Phrases text={column.title} /></h2>
           <ul>
             {column.links.map((l) => (<li><a class="pill-link cursor sq" href={l.href} rel={column.external ? 'noopener' : undefined}>{l.label}</a></li>))}
           </ul>

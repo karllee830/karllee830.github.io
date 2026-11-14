@@ -1,5 +1,6 @@
 ---
 import LangBadge from './LangBadge.astro';
+import Phrases from './Phrases.astro';
 import { formatDate, formatMonthDay, postHref, type PostEntry } from '../lib/posts';
 import type { Lang } from '../i18n/ui';
 
@@ -18,7 +19,7 @@ const { posts, lang, short = false } = Astro.props;
     posts.map(({ post, langs }) => (
       <li>
         <a class="row sq" href={postHref(post, lang)} lang={post.data.lang === lang ? undefined : post.data.lang === 'zh' ? 'zh-CN' : 'en'}>
-          <span class="title cursor">{post.data.title}</span>
+          <span class="title cursor"><Phrases text={post.data.title} /></span>
           <span class="meta">
             {post.data.draft && <span class="draft-tag">draft</span>}
             <LangBadge langs={langs} current={post.data.lang} lang={lang} />
@@ -69,6 +70,12 @@ const { posts, lang, short = false } = Astro.props;
 
   .title {
     min-width: 0;
+  }
+
+  /* Breaks only between phrases, like headings (see base.css). */
+  .title:lang(zh) {
+    word-break: keep-all;
+    overflow-wrap: break-word;
   }
 
   .meta {

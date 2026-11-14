@@ -5,6 +5,7 @@ import sitemap from '@astrojs/sitemap';
 import { satteri } from '@astrojs/markdown-satteri';
 import { figureCaptions } from './src/lib/markdown/figures.mjs';
 import { codeBlocks } from './src/lib/markdown/code-blocks.mjs';
+import { headingPhrases } from './src/lib/markdown/heading-phrases.mjs';
 
 // GitHub Actions passes these in (see .github/workflows/deploy.yml).
 // For a user site (<name>.github.io) BASE_PATH is empty.
@@ -57,6 +58,6 @@ export default defineConfig({
   ],
   markdown: {
     shikiConfig: { theme: 'css-variables' },
-    processor: satteri({ hastPlugins: [figureCaptions, codeBlocks] }),
+    processor: satteri({ hastPlugins: [figureCaptions, codeBlocks, headingPhrases] }),
   },
 });

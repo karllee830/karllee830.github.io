@@ -1,6 +1,8 @@
 ---
 // Splits text into characters that fade in one after another.
-// Words stay unbreakable; CJK text still wraps between characters.
+// Words stay unbreakable; Chinese wraps between phrases (see src/lib/phrases.mjs).
+import { phrases } from '../lib/phrases.mjs';
+
 interface Props {
   text: string;
   /** Index of the first character, to continue a sequence. */
@@ -8,25 +10,13 @@ interface Props {
 }
 
 const { text, start = 0 } = Astro.props;
-const CJK = /[぀-ヿ㐀-鿿豈-﫿　-〿＀-￯]/;
 
-// Latin runs become one word; each CJK character is its own word.
+// Each Latin word or Chinese phrase becomes one unbreakable word.
 const tokens: string[] = [];
 for (const part of text.split(/(\s+)/)) {
   if (!part) continue;
-  if (/^\s+$/.test(part)) {
-    tokens.push(' ');
-    continue;
-  }
-  let run = '';
-  for (const ch of part) {
-    if (CJK.test(ch)) {
-      if (run) tokens.push(run);
-      run = '';
-      tokens.push(ch);
-    } else run += ch;
-  }
-  if (run) tokens.push(run);
+  if (/^\s+$/.test(part)) tokens.push(' ');
+  else tokens.push(...phrases(part));
 }
 
 let index = start;
@@ -37,17 +27,20 @@ const words = tokens.map((token) => {
 ---
 
 <span class="sr-only">{text}</span><span aria-hidden="true">{
-  words.map((word) =>
+  words.map((word, w) =>
     word === null ? (
       ' '
     ) : (
-      <span class="reveal-word">
-        {word.map(({ ch, i }) => (
-          <span class="reveal-char" style={`--i:${i}`}>
-            {ch}
-          </span>
-        ))}
-      </span>
+      <>
+        {w > 0 && words[w - 1] !== null && <wbr />}
+        <span class="reveal-word">
+          {word.map(({ ch, i }) => (
+            <span class="reveal-char" style={`--i:${i}`}>
+              {ch}
+            </span>
+          ))}
+        </span>
+      </>
     ),
   )
 }</span>

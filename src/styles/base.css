@@ -13,6 +13,10 @@ html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   background-color: var(--color-bg);
+  /* A narrow gap between Chinese and Latin letters or digits. */
+  text-autospace: normal;
+  /* No half-width blank before an opening bracket at the start of any line. */
+  text-spacing-trim: trim-start;
 }
 
 body {
@@ -78,8 +82,20 @@ h4 {
   text-wrap: balance;
 }
 
-p {
+p,
+li,
+dd,
+figcaption {
   text-wrap: pretty;
+}
+
+/*
+ * Chinese headings break only at spaces and at the <wbr> placed between
+ * phrases (src/lib/phrases.mjs). A phrase wider than the line still breaks.
+ */
+:is(h1, h2, h3, h4, h5, h6):lang(zh) {
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 ::selection {

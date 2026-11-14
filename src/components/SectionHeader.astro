@@ -1,4 +1,5 @@
 ---
+import Phrases from './Phrases.astro';
 
 interface Props {
   id: string;
@@ -11,7 +12,7 @@ const { id, title, moreHref, moreLabel } = Astro.props;
 ---
 
 <header class="section-header">
-  <h2 id={id}>{title}</h2>
+  <h2 id={id}><Phrases text={title} /></h2>
   {
     moreHref && (
       <a class="pill-link cursor sq" href={moreHref}>

@@ -5,6 +5,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import Comments from '../components/Comments.astro';
 import Icon from '../components/Icon.astro';
 import LangBadge from '../components/LangBadge.astro';
+import Phrases from '../components/Phrases.astro';
 import { site } from '../config/site';
 import { localePath, useTranslations, type Lang, type OutlineItem } from '../i18n/ui';
 import { formatDate, postHref, postSlug, readingMinutes, type Post, type PostEntry } from '../lib/posts';
@@ -66,7 +67,7 @@ const nextLink = next
       <a class="back pill-link cursor sq" href={localePath(lang, '/blog/')}>
         {t('post.back')}
       </a>
-      <h1 id="post-title" lang={foreign}>{title}</h1>
+      <h1 id="post-title" lang={foreign}><Phrases text={title} /></h1>
       <p class="meta">
         <time class="mono" datetime={date.toISOString()}>{formatDate(date)}</time>
         <span aria-hidden="true">·</span>
@@ -294,6 +295,7 @@ const nextLink = next
     height: var(--control-lg);
     padding-inline: var(--space-4);
     font-weight: var(--weight-medium);
+    white-space: nowrap;
     transition:
       --sq-bg var(--duration-fast) var(--ease-out),
       --sq-border var(--duration-fast) var(--ease-out),

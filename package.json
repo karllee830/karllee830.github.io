@@ -24,6 +24,7 @@
     "@fontsource-variable/google-sans-flex": "^5.3.2",
     "@fontsource-variable/noto-sans-sc": "^5.3.1",
     "astro": "^7.4.10",
+    "budoux": "^0.10.2",
     "kubai-icons": "^0.6.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"

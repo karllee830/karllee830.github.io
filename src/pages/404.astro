@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import PixelWordmark from '../components/PixelWordmark.astro';
+import Phrases from '../components/Phrases.astro';
 import { localePath, useTranslations } from '../i18n/ui';
 
 const zh = useTranslations('zh');
@@ -11,7 +12,7 @@ const en = useTranslations('en');
   <section class="not-found">
     <PixelWordmark text="404" crop={1} label="404" />
     <div class="copy">
-      <h1>{zh('notFound.title')}</h1>
+      <h1><Phrases text={zh('notFound.title')} /></h1>
       <p>{zh('notFound.body')}</p>
       <p lang="en">{en('notFound.title')}. {en('notFound.body')}</p>
     </div>
@@ -54,6 +55,7 @@ const en = useTranslations('en');
     padding-inline: var(--space-4);
     font-weight: var(--weight-medium);
     color: var(--color-on-fg);
+    white-space: nowrap;
   }
 
   .home:hover {
