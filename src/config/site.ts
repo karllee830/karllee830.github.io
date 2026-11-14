@@ -119,7 +119,7 @@ export const site = {
   /** Shown under "Recent projects" on the home page, newest first. */
   projects: [
     {
-      name: { zh: 'OpenHane 羽见', en: 'OpenHane' },
+      name: { zh: 'OpenHane羽见', en: 'OpenHane' },
       description: {
         zh: '自托管的语音、视频和屏幕共享，不用注册账号，各平台都有客户端。',
         en: 'Self-hosted voice, video and screen sharing. No accounts, clients for every platform.',
@@ -131,7 +131,7 @@ export const site = {
     {
       name: 'openai-imagegen-mcp',
       description: {
-        zh: '用 GPT Image 生成和编辑图片的 MCP 服务器，原图保存在本地。',
+        zh: '用GPT Image生成和编辑图片的MCP服务器，原图保存在本地。',
         en: 'An MCP server that makes and edits images with GPT Image, saving originals locally.',
       },
       icon: 'image-sparkle',

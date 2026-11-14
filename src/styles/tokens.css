@@ -178,6 +178,17 @@
   color-scheme: dark;
 }
 
+/* Chinese keeps its natural spacing; Latin text keeps the tighter tracking. */
+:lang(zh) {
+  --tracking-tight: normal;
+  --tracking-snug: normal;
+}
+
+:lang(en) {
+  --tracking-tight: -0.02em;
+  --tracking-snug: -0.01em;
+}
+
 @media (min-width: 768px) {
   :root {
     --text-display: 28px;

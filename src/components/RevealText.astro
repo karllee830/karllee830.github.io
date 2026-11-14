@@ -2,6 +2,7 @@
 // Splits text into characters that fade in one after another.
 // Words stay unbreakable; Chinese wraps between phrases (see src/lib/phrases.mjs).
 import { phrases } from '../lib/phrases.mjs';
+import { autospaceBetween } from '../lib/cjk.mjs';
 
 interface Props {
   text: string;
@@ -33,7 +34,12 @@ const words = tokens.map((token) => {
     ) : (
       <>
         {w > 0 && words[w - 1] !== null && <wbr />}
-        <span class="reveal-word">
+        <span
+          class:list={[
+            'reveal-word',
+            { 'is-spaced': autospaceBetween(words[w - 1]?.at(-1)?.ch, word[0]?.ch) },
+          ]}
+        >
           {word.map(({ ch, i }) => (
             <span class="reveal-char" style={`--i:${i}`}>
               {ch}

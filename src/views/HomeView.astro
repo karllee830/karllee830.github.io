@@ -31,7 +31,7 @@ const wordLength = [...(intro.words[0] ?? '').replace(/\s/g, '')].length;
     <h1 id="hero-title" class="statement">
       <span class="hello" lang={lang === 'en' ? undefined : 'en'}><RevealText text={intro.hello} /></span>
       <span class="sub">
-        <RevealText text={intro.prefix} start={helloLength} /><span class="word"><ScrambleText client:idle words={intro.words} revealStart={wordStart} /></span><RevealText text={intro.suffix} start={wordStart + wordLength} />
+        <RevealText text={intro.prefix} start={helloLength} /><span class="tail"><span class="word"><ScrambleText client:idle words={intro.words} revealStart={wordStart} before={intro.prefix} after={intro.suffix} /></span><RevealText text={intro.suffix} start={wordStart + wordLength} /></span>
       </span>
     </h1>
 
@@ -86,12 +86,22 @@ const wordLength = [...(intro.words[0] ?? '').replace(/\s/g, '')].length;
     text-wrap: initial;
   }
 
+  /* The English greeting keeps its own tracking on the Chinese page. */
+  .hello {
+    letter-spacing: var(--tracking-tight);
+  }
+
   .sub {
     color: var(--color-fg-muted);
   }
 
   .word {
     color: var(--color-accent-ink);
+  }
+
+  /* The closing punctuation stays on the line of the word before it. */
+  .tail {
+    white-space: nowrap;
   }
 
   .bio {

@@ -288,6 +288,11 @@ figcaption {
   white-space: nowrap;
 }
 
+/* Inline blocks stop text-autospace, so the Han–Latin gap is added here. */
+.reveal-word.is-spaced {
+  margin-inline-start: 0.125em;
+}
+
 .reveal-char {
   display: inline-block;
   animation: reveal-char 560ms var(--ease-out) both;

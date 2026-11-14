@@ -5,7 +5,7 @@
 import Icon from './Icon.astro';
 import Phrases from './Phrases.astro';
 import { site } from '../config/site';
-import { useTranslations, type Lang } from '../i18n/ui';
+import { useTranslations, wordGap, type Lang } from '../i18n/ui';
 import { getThreads } from '../lib/comments';
 import { formatDate } from '../lib/posts';
 
@@ -17,6 +17,7 @@ interface Props {
 
 const { lang, term } = Astro.props;
 const t = useTranslations(lang);
+const gap = wordGap(lang);
 const thread = (await getThreads()).get(term);
 const comments = thread?.comments ?? [];
 // Before the deploy workflow has opened the issue, search for it instead.
@@ -27,8 +28,7 @@ const writeHref = thread
 
 <section class="comments" aria-labelledby="comments-title">
   <h2 id="comments-title">
-    <Phrases text={t('post.comments')} />
-    {comments.length > 0 && <span class="count mono">{comments.length}</span>}
+    <Phrases text={t('post.comments')} />{comments.length > 0 && <>{gap}<span class="count mono">{comments.length}</span></>}
   </h2>
   <p class="note">{t('post.commentsNote')}</p>
 

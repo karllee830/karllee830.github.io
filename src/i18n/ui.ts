@@ -50,9 +50,9 @@ export const ui = {
     'post.prev': '上一篇',
     'post.next': '下一篇',
     'post.comments': '评论',
-    'post.commentsNote': '在 GitHub 上留言，审核通过后会显示在这里。',
+    'post.commentsNote': '在GitHub上留言，审核通过后会显示在这里。',
     'post.commentsEmpty': '还没有留言。',
-    'post.commentsWrite': '在 GitHub 上留言',
+    'post.commentsWrite': '在GitHub上留言',
     'post.commentsOwner': '博主',
     'outline.label': '本页目录',
     'outline.intro': '开头',
@@ -151,6 +151,14 @@ export type UIKey = keyof (typeof ui)['zh'];
 
 export function useTranslations(lang: Lang) {
   return (key: UIKey): string => ui[lang][key] ?? ui[defaultLang][key];
+}
+
+/**
+ * The space between a number or Latin word and the text beside it. Chinese
+ * leaves that gap to `text-autospace`, so it is empty there.
+ */
+export function wordGap(lang: Lang): string {
+  return lang === 'zh' ? '' : ' ';
 }
 
 export function otherLang(lang: Lang): Lang {

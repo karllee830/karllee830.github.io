@@ -8,11 +8,9 @@
 // character.
 
 import { loadDefaultSimplifiedChineseParser } from 'budoux';
+import { HAN, LATIN } from './cjk.mjs';
 
 const parser = loadDefaultSimplifiedChineseParser();
-
-const HAN = /[㐀-鿿豈-﫿]/;
-const LATIN = /[A-Za-z0-9]/;
 
 /**
  * @param {string} text

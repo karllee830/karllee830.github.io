@@ -2,7 +2,7 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import RevealText from '../components/RevealText.astro';
 import PostList from '../components/PostList.astro';
-import { useTranslations, type Lang } from '../i18n/ui';
+import { useTranslations, wordGap, type Lang } from '../i18n/ui';
 import { listPosts, type PostEntry } from '../lib/posts';
 
 interface Props {
@@ -11,6 +11,7 @@ interface Props {
 
 const { lang } = Astro.props;
 const t = useTranslations(lang);
+const gap = wordGap(lang);
 // One entry per post; a translated post is listed once, in this page's language.
 const posts = await listPosts(lang);
 
@@ -32,7 +33,7 @@ const outline = [...years.keys()].map((year) => ({ id: `year-${year}`, text: Str
 >
   <header class="page-header" data-page-opening>
     <h1><RevealText text={t('blog.title')} /></h1>
-    <p class="count"><span class="mono">{posts.length}</span> {t('blog.count')}</p>
+    <p class="count"><span class="mono">{posts.length}</span>{gap}{t('blog.count')}</p>
   </header>
 
   {

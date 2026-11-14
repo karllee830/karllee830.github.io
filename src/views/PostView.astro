@@ -7,7 +7,7 @@ import Icon from '../components/Icon.astro';
 import LangBadge from '../components/LangBadge.astro';
 import Phrases from '../components/Phrases.astro';
 import { site } from '../config/site';
-import { localePath, useTranslations, type Lang, type OutlineItem } from '../i18n/ui';
+import { localePath, useTranslations, wordGap, type Lang, type OutlineItem } from '../i18n/ui';
 import { formatDate, postHref, postSlug, readingMinutes, type Post, type PostEntry } from '../lib/posts';
 import '../styles/prose.css';
 
@@ -27,6 +27,7 @@ const textLang = post.data.lang;
 // Marks text written in another language than the page, for fonts and screen readers.
 const foreign = textLang === lang ? undefined : textLang === 'zh' ? 'zh-CN' : 'en';
 const t = useTranslations(lang);
+const gap = wordGap(lang);
 const { Content, headings } = await render(post);
 const minutes = readingMinutes(post.body);
 const slug = postSlug(post);
@@ -71,7 +72,7 @@ const nextLink = next
       <p class="meta">
         <time class="mono" datetime={date.toISOString()}>{formatDate(date)}</time>
         <span aria-hidden="true">·</span>
-        <span>{minutes} {t('post.minutes')}</span>
+        <span>{minutes}{gap}{t('post.minutes')}</span>
         <span aria-hidden="true">·</span>
         <LangBadge langs={versions} current={textLang} lang={lang} hrefs={otherHrefs} />
         {
@@ -79,7 +80,7 @@ const nextLink = next
             <>
               <span aria-hidden="true">·</span>
               <span>
-                {t('post.updated')} <time class="mono" datetime={updated.toISOString()}>{formatDate(updated)}</time>
+                {t('post.updated')}{gap}<time class="mono" datetime={updated.toISOString()}>{formatDate(updated)}</time>
               </span>
             </>
           )

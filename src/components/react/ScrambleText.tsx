@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { AUTOSPACE, autospaceBetween } from '../../lib/cjk.mjs';
 
 interface Props {
   words: string[];
@@ -9,6 +10,9 @@ interface Props {
    * (RevealText), so the first word fades in with the rest of the sentence.
    */
   revealStart?: number;
+  /** Text right before and after the word, to keep the Han–Latin gap that inline blocks lose. */
+  before?: string;
+  after?: string;
 }
 
 const LATIN_NOISE = '!<>-_\\/[]{}=+*^?#%@01';
@@ -22,8 +26,9 @@ const pick = (pool: string) => pool[(Math.random() * pool.length) | 0];
  * Cycles through words with a decode effect. The box eases to the width of
  * the incoming word, so the rest of the sentence slides instead of jumping.
  */
-export default function ScrambleText({ words, interval = 2800, revealStart }: Props) {
+export default function ScrambleText({ words, interval = 2800, revealStart, before = '', after = '' }: Props) {
   const [text, setText] = useState(words[0] ?? '');
+  const [current, setCurrent] = useState(0);
   // The first word joins the page's reveal until the first switch replaces it.
   const [revealing, setRevealing] = useState(revealStart !== undefined);
   const [width, setWidth] = useState<number | undefined>(undefined);
@@ -66,6 +71,7 @@ export default function ScrambleText({ words, interval = 2800, revealStart }: Pr
       if (document.visibilityState !== 'visible') return;
       setRevealing(false);
       index = (index + 1) % words.length;
+      setCurrent(index);
       setWidth(measure(index));
       scrambleTo(words[index]);
     }, interval);
@@ -75,6 +81,12 @@ export default function ScrambleText({ words, interval = 2800, revealStart }: Pr
       cancelAnimationFrame(frame.current);
     };
   }, [words, interval]);
+
+  // The gaps sit inside the box, so its width eases along with the word.
+  const gaps = (word: string): CSSProperties => ({
+    paddingInlineStart: autospaceBetween(before.at(-1), word[0]) ? AUTOSPACE : undefined,
+    paddingInlineEnd: autospaceBetween(word.at(-1), after[0]) ? AUTOSPACE : undefined,
+  });
 
   return (
     <span className="scramble" style={width ? { width } : undefined}>
@@ -86,12 +98,13 @@ export default function ScrambleText({ words, interval = 2800, revealStart }: Pr
             sizers.current[i] = el;
           }}
           className="scramble-sizer"
+          style={gaps(word)}
           aria-hidden="true"
         >
           {word}
         </span>
       ))}
-      <span className="scramble-live" aria-hidden="true">
+      <span className="scramble-live" style={gaps(words[current] ?? '')} aria-hidden="true">
         {revealing ? <RevealChars text={text} start={revealStart ?? 0} /> : text}
       </span>
     </span>
